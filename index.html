@@ -3657,35 +3657,67 @@ async function tvScannerPrices(symbols) {
   const body = JSON.stringify({ symbols: { tickers: tvTickers }, columns: ['close', 'change'] });
   let tvData = null;
 
-  // Try 1: direct fetch (works if TradingView allows CORS from this origin)
+  // Strategy 1: corsproxy with text/plain (avoids CORS preflight)
   try {
-    const res = await fetchWithTimeout(scanUrl, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
-    }, 10000);
+    const res = await fetchWithTimeout(
+      'https://corsproxy.io/?' + encodeURIComponent(scanUrl),
+      { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body },
+      12000
+    );
     if (res.ok) tvData = await res.json();
   } catch(_) {}
 
-  // Try 2: via each CORS proxy
+  // Strategy 2: corsproxy with application/json
   if (!tvData) {
-    for (const proxy of CORS_PROXIES) {
-      try {
-        const res = await fetchWithTimeout(proxy(scanUrl), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
-        }, 10000);
-        if (res.ok) { tvData = await res.json(); break; }
-      } catch(_) {}
-    }
+    try {
+      const res = await fetchWithTimeout(
+        'https://corsproxy.io/?' + encodeURIComponent(scanUrl),
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+        12000
+      );
+      if (res.ok) tvData = await res.json();
+    } catch(_) {}
   }
 
-  if (!tvData?.data) return {};
+  // Strategy 3: direct fetch (no proxy — works if TV allows CORS from this origin)
+  if (!tvData) {
+    try {
+      const res = await fetchWithTimeout(scanUrl,
+        { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body },
+        10000
+      );
+      if (res.ok) tvData = await res.json();
+    } catch(_) {}
+  }
+
+  // Strategy 4: allorigins GET wrapper — encode POST body into URL
+  if (!tvData) {
+    try {
+      const encodedBody = encodeURIComponent(body);
+      const aoUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(scanUrl + '?q=' + encodedBody)}`;
+      const res = await fetchWithTimeout(aoUrl, {}, 10000);
+      if (res.ok) {
+        const wrap = await res.json();
+        if (wrap.contents) tvData = JSON.parse(wrap.contents);
+      }
+    } catch(_) {}
+  }
+
+  // Strategy 5: individual Yahoo chart calls for any symbols that have them
+  // (only BEZQ.TA exists on Yahoo, but it's a backup)
   const out = {};
-  tvData.data.forEach(item => {
-    const tvSym = item.s;
-    const sym = TV_TICKER_REV[tvSym] || (tvSym.replace('TASE:', '') + '.TA');
-    const close = item.d?.[0];
-    const chg   = item.d?.[1] ?? 0;
-    if (close != null) out[sym] = { price: close / 100, dailyPct: chg };
-  });
+  if (tvData?.data) {
+    tvData.data.forEach(item => {
+      const tvSym = item.s;
+      const sym = TV_TICKER_REV[tvSym] || (tvSym.replace('TASE:', '') + '.TA');
+      const close = item.d?.[0];
+      const chg   = item.d?.[1] ?? 0;
+      if (close != null) out[sym] = { price: close / 100, dailyPct: chg };
+    });
+  }
+
+  // Log success/failure for diagnostics
+  console.log('[TASE prices]', Object.keys(out).length + '/' + symbols.length, 'fetched via TradingView');
   return out;
 }
 
