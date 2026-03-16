@@ -3581,10 +3581,17 @@ const CORS_PROXIES = [
   url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
 ];
 
+// Safe timeout helper (AbortSignal.timeout not supported on older iOS Safari)
+function fetchWithTimeout(url, opts = {}, ms = 10000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 async function fetchViaCors(url, opts = {}) {
   for (const proxy of CORS_PROXIES) {
     try {
-      const res = await fetch(proxy(url), { ...opts, signal: AbortSignal.timeout(8000) });
+      const res = await fetchWithTimeout(proxy(url), opts, 10000);
       if (res.ok) return res;
     } catch(_) {}
   }
@@ -3652,12 +3659,11 @@ async function tvScannerPrices(symbols) {
   let tvData = null;
   for (const proxy of CORS_PROXIES) {
     try {
-      const res = await fetch(proxy(scanUrl), {
+      const res = await fetchWithTimeout(proxy(scanUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
-        signal: AbortSignal.timeout(8000),
-      });
+      }, 10000);
       if (res.ok) { tvData = await res.json(); break; }
     } catch(_) {}
   }
@@ -3680,7 +3686,7 @@ async function alloriginsYahooPrices(symbols) {
     const ticker = YAHOO_TICKER[sym] || sym;
     const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
     try {
-      const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(yUrl), { signal: AbortSignal.timeout(10000) });
+      const res = await fetchWithTimeout('https://api.allorigins.win/get?url=' + encodeURIComponent(yUrl), {}, 10000);
       if (!res.ok) return;
       const wrap = await res.json();
       const json = JSON.parse(wrap.contents);
