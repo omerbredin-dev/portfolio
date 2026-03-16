@@ -2,6 +2,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    # Every 5 minutes, Mon-Fri, 07:00-21:00 UTC (covers IL + US market hours)
+    - cron: '*/5 7-21 * * 1-5'
+  workflow_dispatch: # Allow manual trigger
 permissions:
   contents: read
   pages: write
@@ -17,6 +21,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch latest prices
+        run: python3 scripts/fetch_prices.py
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

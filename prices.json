@@ -1,0 +1,175 @@
+{
+ "timestamp": "2026-03-16T14:31:18.936686+00:00",
+ "prices": {
+  "BEZQ.TA": {
+   "price": 8.225,
+   "dailyPct": 1.1436301032956164
+  },
+  "KSMF74.TA": {
+   "price": 402.3,
+   "dailyPct": -0.12413108242303873
+  },
+  "KSMF57.TA": {
+   "price": 920.8,
+   "dailyPct": -1.7918088737201365
+  },
+  "HRLF15.TA": {
+   "price": 14.09,
+   "dailyPct": -1.7433751743375174
+  },
+  "TCHF12.TA": {
+   "price": 202.2,
+   "dailyPct": 0
+  },
+  "iSFF301.TA": {
+   "price": 343.4,
+   "dailyPct": 0.4681100058513751
+  },
+  "iSFF501.TA": {
+   "price": 123.4,
+   "dailyPct": -0.5640612409347301
+  },
+  "INFF1.TA": {
+   "price": 41.92,
+   "dailyPct": -0.04768717215069146
+  },
+  "iSFF702.TA": {
+   "price": 2250.0,
+   "dailyPct": -0.03554291807357384
+  },
+  "NVDA": {
+   "price": 184.0023956298828,
+   "dailyPct": 2.0818
+  },
+  "ASML": {
+   "price": 1384.8599853515625,
+   "dailyPct": 2.9108
+  },
+  "AAPL": {
+   "price": 253.0749969482422,
+   "dailyPct": 1.1814
+  },
+  "MSFT": {
+   "price": 397.1300048828125,
+   "dailyPct": 0.3994
+  },
+  "AMZN": {
+   "price": 209.1199951171875,
+   "dailyPct": 0.6982
+  },
+  "INTC": {
+   "price": 47.57500076293945,
+   "dailyPct": 3.9436
+  },
+  "GOOGL": {
+   "price": 304.9750061035156,
+   "dailyPct": 0.8916
+  },
+  "NET": {
+   "price": 209.42999267578125,
+   "dailyPct": -1.4215
+  },
+  "MA": {
+   "price": 504.489990234375,
+   "dailyPct": 1.3052
+  },
+  "ACN": {
+   "price": 196.69000244140625,
+   "dailyPct": 0.0203
+  },
+  "DAL": {
+   "price": 60.18000030517578,
+   "dailyPct": 2.3818
+  },
+  "BA": {
+   "price": 214.9250030517578,
+   "dailyPct": 2.3989
+  },
+  "SEDG": {
+   "price": 40.20000076293945,
+   "dailyPct": 7.3718
+  },
+  "MDB": {
+   "price": 264.1400146484375,
+   "dailyPct": 1.3973
+  },
+  "TWLO": {
+   "price": 125.72000122070312,
+   "dailyPct": 0.9799
+  },
+  "GLBE": {
+   "price": 34.45000076293945,
+   "dailyPct": -0.9488
+  },
+  "ESTC": {
+   "price": 53.290000915527344,
+   "dailyPct": 3.4958
+  },
+  "QQQM": {
+   "price": 247.4199981689453,
+   "dailyPct": 1.215
+  },
+  "VOO": {
+   "price": 616.0499877929688,
+   "dailyPct": 1.1427
+  },
+  "IBIT": {
+   "price": 41.61000061035156,
+   "dailyPct": 3.0716
+  },
+  "TAN": {
+   "price": 56.959999084472656,
+   "dailyPct": 2.853
+  },
+  "QTUM": {
+   "price": 111.41500091552734,
+   "dailyPct": 1.8698
+  },
+  "BRKb": {
+   "price": 495.4700012207031,
+   "dailyPct": 1.1101
+  }
+ },
+ "indexes": {
+  "SP:SPX": {
+   "price": 6708.59,
+   "chgPct": 1.1518,
+   "name": "S&P 500",
+   "currency": "USD"
+  },
+  "NASDAQ:NDX": {
+   "price": 24719.7742,
+   "chgPct": 1.3906,
+   "name": "Nasdaq",
+   "currency": "USD"
+  },
+  "XETR:DAX": {
+   "price": 23662.93,
+   "chgPct": 0.9197,
+   "name": "DAX",
+   "currency": "EUR"
+  },
+  "TVC:SX5E": {
+   "price": 5756.94,
+   "chgPct": 0.7053,
+   "name": "STOXX 50",
+   "currency": "EUR"
+  },
+  "TASE:TA125": {
+   "price": 4123.96,
+   "chgPct": 0.1425,
+   "name": "TA-125",
+   "currency": "ILS"
+  },
+  "BITSTAMP:BTCUSD": {
+   "price": 73327,
+   "chgPct": 0.6741,
+   "name": "Bitcoin",
+   "currency": "USD"
+  }
+ },
+ "fx": {
+  "USDILS": 3.139544
+ },
+ "errors": []
+}

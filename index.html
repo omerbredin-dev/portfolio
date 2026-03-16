@@ -3237,6 +3237,8 @@ async function fetchFxRate() {
     dot.className = 'fx-live-dot';
     renderAll();
   } catch (e) {
+    // Don't show "Offline" if we already have a rate from prices.json
+    if (updated.textContent && updated.textContent !== 'Offline' && updated.textContent !== '') return;
     dot.className = 'fx-live-dot error';
     display.textContent = fxRate.toFixed(4);
     updated.textContent = 'Offline';
@@ -3837,13 +3839,97 @@ function renderAll() {
   updateClearBtn();
 }
 
+// ── Load pre-fetched prices from GitHub Actions (same domain = no CORS) ──
+async function loadPricesJson() {
+  try {
+    const res = await fetch('prices.json?t=' + Date.now());  // cache-bust
+    if (!res.ok) return false;
+    const data = await res.json();
+    const age = (Date.now() - new Date(data.timestamp).getTime()) / 60000;  // minutes
+    console.log('[prices.json] age=' + age.toFixed(1) + 'min, prices=' + Object.keys(data.prices||{}).length);
+
+    // Apply FX rate
+    if (data.fx?.USDILS) {
+      fxRate = data.fx.USDILS;
+      const dot = document.getElementById('fxDot');
+      const display = document.getElementById('fxRateDisplay');
+      const updated = document.getElementById('fxUpdated');
+      if (dot) dot.className = 'fx-live-dot';
+      if (display) display.textContent = fxRate.toFixed(4);
+      if (updated) updated.textContent = 'Updated ' + new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+
+    // Apply stock prices
+    let applied = 0;
+    for (const [sym, info] of Object.entries(data.prices || {})) {
+      const row = PORTFOLIO.find(p => p.symbol === sym);
+      if (row && info.price != null) {
+        row.currentPrice = info.price;
+        row.dailyChangePct = info.dailyPct || 0;
+        row._stale = false;
+        _staleSymbols.delete(sym);
+        applied++;
+      }
+    }
+
+    // Apply market indexes
+    if (data.indexes && Object.keys(data.indexes).length) {
+      const el = document.getElementById('marketIndexes');
+      if (el) {
+        marketIndexData = Object.entries(data.indexes).map(([tv, info]) => ({
+          tv, name: info.name, currency: info.currency, price: info.price, chgPct: info.chgPct
+        }));
+        el.innerHTML = MARKET_INDEXES.map(idx => {
+          const q = data.indexes[idx.tv];
+          if (!q || q.price == null) {
+            return `<div class="idx-row"><span class="idx-name">${idx.name}</span><span class="idx-loading">—</span></div>`;
+          }
+          const sign = q.chgPct >= 0 ? '+' : '';
+          const cls  = q.chgPct >= 0 ? 'pos' : 'neg';
+          return `<div class="idx-row">
+            <span class="idx-name">${idx.name}</span>
+            <span class="idx-price">${fmtIdx(q.price, idx.currency)}</span>
+            <span class="idx-chg ${cls}">${sign}${q.chgPct.toFixed(2)}%</span>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // Update refresh button
+    const btn = document.getElementById('refreshBtn');
+    if (btn) {
+      const staleCount = _staleSymbols.size;
+      const timeStr = new Date(data.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      btn.textContent = staleCount ? `↻ ${timeStr} (${staleCount} stale)` : `↻ ${timeStr}`;
+    }
+
+    cachePrices();
+    console.log('[prices.json] Applied ' + applied + ' prices');
+    return applied > 0;
+  } catch(e) {
+    console.log('[prices.json] Failed:', e.message);
+    return false;
+  }
+}
+
 // Boot: load portfolio from server, then render everything
 (async () => {
   await loadPortfolioState();
   setTableView('performance'); // init the return chart wrapper + render
   renderAll();
-  loadMarketIndexes();
-  refreshPrices(); // auto-refresh prices on every page load / hard-refresh
+
+  // Primary: load pre-fetched prices from prices.json (works on all devices)
+  const gotPrices = await loadPricesJson();
+  if (gotPrices) renderAll();
+
+  // Fallback: live fetch via CORS proxies (works on desktop browsers)
+  if (!gotPrices) {
+    loadMarketIndexes();
+    await refreshPrices();
+  } else {
+    // Still try live refresh in background for freshest data
+    refreshPrices().catch(() => {});
+  }
 
   // Restore auto-refresh preference
   // Auto-refresh ON by default during market hours
