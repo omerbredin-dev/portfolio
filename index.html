@@ -3553,7 +3553,7 @@ function toggleAutoRefresh() {
   autoRefreshEnabled = !autoRefreshEnabled;
   localStorage.setItem('portfolioAutoRefresh', autoRefreshEnabled ? '1' : '0');
   if (autoRefreshEnabled) {
-    autoRefreshTimer = setInterval(() => { if (isMarketOpen()) refreshPrices(); }, 5 * 60 * 1000);
+    autoRefreshTimer = setInterval(() => { if (isMarketOpen()) refreshPrices(); }, 2 * 60 * 1000);
   } else {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
@@ -3563,7 +3563,7 @@ function toggleAutoRefresh() {
     btn.textContent = autoRefreshEnabled ? '⏸ Auto' : '▶ Auto';
     btn.classList.toggle('auto-on', autoRefreshEnabled);
     btn.title = autoRefreshEnabled
-      ? 'Auto-refresh ON — updates every 5 min during market hours'
+      ? 'Auto-refresh ON — updates every 2 min during market hours'
       : 'Auto-refresh OFF — click to enable';
   }
 }
@@ -3800,7 +3800,8 @@ function renderAll() {
   refreshPrices(); // auto-refresh prices on every page load / hard-refresh
 
   // Restore auto-refresh preference
-  if (localStorage.getItem('portfolioAutoRefresh') === '1') toggleAutoRefresh();
+  // Auto-refresh ON by default during market hours
+  if (localStorage.getItem('portfolioAutoRefresh') !== '0') toggleAutoRefresh();
 
   // Restore saved cash and auto-run gap analysis if cash was previously entered
   const _savedCash = parseFloat(localStorage.getItem('portfolioCashNIS')) || 0;
