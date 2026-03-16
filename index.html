@@ -3723,10 +3723,17 @@ async function refreshPrices() {
   const taseSymbols = PORTFOLIO.filter(r => r.symbol.endsWith('.TA')).map(r => r.symbol);
   const globalSymbols = PORTFOLIO.filter(r => !r.symbol.endsWith('.TA'));
 
-  // ══ Phase 1: Yahoo Finance for global (US/EU) stocks — parallel ══
-  const globalResults = await Promise.allSettled(
-    globalSymbols.map(r => yahooChartPrice(r.symbol).then(p => ({ symbol: r.symbol, ...p })))
-  );
+  // ══ Fetch GLOBAL (Yahoo) and TASE (TradingView) IN PARALLEL ══
+  const [globalResults, tvPrices] = await Promise.all([
+    // Global stocks via Yahoo Finance
+    Promise.allSettled(
+      globalSymbols.map(r => yahooChartPrice(r.symbol).then(p => ({ symbol: r.symbol, ...p })))
+    ),
+    // TASE stocks via TradingView scanner (single fast request)
+    tvScannerPrices(taseSymbols).catch(() => ({}))
+  ]);
+
+  // Apply global results
   globalResults.forEach(res => {
     if (res.status === 'fulfilled') {
       const { symbol, price, dailyPct } = res.value;
@@ -3736,38 +3743,19 @@ async function refreshPrices() {
     }
   });
 
-  // ══ Phase 2: ALL TASE symbols via TradingView ONLY (Yahoo doesn't have IL ETFs) ══
-  if (taseSymbols.length) {
-    try {
-      const tvPrices = await tvScannerPrices(taseSymbols);
-      for (const sym of taseSymbols) {
-        const data = tvPrices[sym];
-        if (data) {
-          const row = PORTFOLIO.find(p => p.symbol === sym);
-          if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
-          _staleSymbols.delete(sym);
-        } else {
-          _staleSymbols.add(sym);
-          const row = PORTFOLIO.find(p => p.symbol === sym);
-          if (row) row._stale = true;
-        }
-      }
-    } catch(_) {
-      // TradingView completely failed — mark all TASE as stale
-      taseSymbols.forEach(sym => {
-        _staleSymbols.add(sym);
-        const row = PORTFOLIO.find(p => p.symbol === sym);
-        if (row) row._stale = true;
-      });
+  // Apply TASE results
+  for (const sym of taseSymbols) {
+    const data = tvPrices[sym];
+    if (data) {
+      const row = PORTFOLIO.find(p => p.symbol === sym);
+      if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
+      _staleSymbols.delete(sym);
+    } else {
+      _staleSymbols.add(sym);
+      const row = PORTFOLIO.find(p => p.symbol === sym);
+      if (row) row._stale = true;
     }
   }
-
-  // ── Mark truly unreachable symbols as stale ──
-  pendingTA.forEach(sym => {
-    _staleSymbols.add(sym);
-    const row = PORTFOLIO.find(p => p.symbol === sym);
-    if (row) row._stale = true;
-  });
 
   // Cache all prices so next load starts with latest known values
   cachePrices();
