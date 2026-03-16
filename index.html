@@ -1,0 +1,3796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --surface2: #22263a;
+      --border:   #2e3350;
+      --text:     #e8eaf6;
+      --muted:    #7b82a8;
+      --accent:   #5c7cfa;
+      --green:    #3ecf8e;
+      --red:      #f56565;
+      --gold:     #f6ad55;
+      --radius:   12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo { font-size: 20px; font-weight: 700; letter-spacing: -.5px; color: var(--text); }
+    .logo span { color: var(--accent); }
+
+    .header-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+    .fx-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .fx-badge strong { color: var(--gold); }
+    .fx-rate-value { color: var(--gold); font-weight: 700; font-size: 12px; min-width: 36px; }
+    .fx-live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); flex-shrink: 0;
+      box-shadow: 0 0 5px var(--green);
+    }
+    .fx-live-dot.loading { background: var(--gold); box-shadow: 0 0 5px var(--gold); animation: pulse .8s infinite; }
+    .fx-live-dot.error   { background: var(--red);  box-shadow: 0 0 5px var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .fx-updated { font-size: 10px; color: var(--muted); }
+
+    .currency-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .currency-toggle button {
+      border: none; cursor: pointer;
+      padding: 6px 16px; font-size: 12px; font-weight: 600;
+      background: transparent; color: var(--muted); transition: all .2s;
+    }
+    .currency-toggle button.active {
+      background: var(--accent); color: #fff;
+    }
+
+    /* ── Main layout ── */
+    main { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ── Summary cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .card.blue::before   { background: var(--accent); }
+    .card.green::before  { background: var(--green); }
+    .card.red::before    { background: var(--red); }
+    .card.gold::before   { background: var(--gold); }
+    .card.purple::before { background: #b794f4; }
+
+    .card-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
+    .card-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .card-sub   { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .up   { color: var(--green); }
+    .down { color: var(--red); }
+
+    /* ── Filters ── */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-label { font-size: 11px; color: var(--muted); align-self: center; text-transform: uppercase; letter-spacing: .6px; margin-right: 4px; }
+    .divider { width: 1px; height: 24px; background: var(--border); }
+
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .pill:hover  { border-color: var(--accent); color: var(--text); }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    /* "+" combinator between active country pills */
+    .pill-plus {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      align-self: center;
+    }
+
+    .search-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      width: 180px;
+      transition: border-color .2s;
+      margin-left: auto;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    /* ── Bottom grid ── */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+    /* Sunburst & Heatmap expand to full width — side panel hidden */
+    .bottom-grid.sunburst-mode,
+    .bottom-grid.heatmap-mode {
+      grid-template-columns: 1fr;
+    }
+    .bottom-grid.sunburst-mode .side-panel,
+    .bottom-grid.heatmap-mode .side-panel {
+      display: none;
+    }
+    /* Heatmap */
+    .hm-cell rect { transition: opacity .15s; }
+    .hm-cell:hover rect { opacity: .82; }
+    .hm-toggle { display:flex; gap:6px; margin-bottom:10px; justify-content:center; }
+    .hm-toggle-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:4px 12px; font-size:11px; font-weight:600; color:var(--muted); cursor:pointer; transition:all .15s; }
+    .hm-toggle-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .hm-legend { display:flex; align-items:center; gap:8px; font-size:10px; color:var(--muted); justify-content:center; margin-top:8px; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .table-title {
+      padding: 16px 20px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .row-count {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 2px 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 8px 10px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.num, tbody td.num { text-align: right; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .12s;
+      cursor: default;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+
+    tbody td {
+      padding: 8px 10px;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    .sym { font-weight: 700; font-size: 12px; color: var(--accent); letter-spacing: .3px; }
+    .asset-name { color: var(--muted); font-size: 11px; margin-top: 1px; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .badge {
+      display: inline-block;
+      border-radius: 100px;
+      padding: 2px 9px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .3px;
+    }
+    .badge-stock  { background: #1e3a5f; color: #63b3ed; }
+    .badge-etf    { background: #1a3a2a; color: var(--green); }
+    .badge-crypto { background: #3d2a0a; color: var(--gold); }
+    .badge-bond   { background: #2a1a3d; color: #b794f4; }
+    .badge-other  { background: #2a2a2a; color: var(--muted); }
+
+    .exch { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: .3px; padding: 1px 6px; border-radius: 4px; margin-top: 3px; }
+    .exch-nasdaq { background: #0d2240; color: #4ea8e0; }
+    .exch-nyse   { background: #0d2a1a; color: #4ecb8a; }
+    .exch-tase   { background: #2a1f0d; color: #e0a84e; }
+    .stale-badge { display:inline-block; font-size:9px; font-weight:600; padding:1px 5px; border-radius:3px; background:#3a2a0d; color:#e8a735; margin-left:4px; vertical-align:middle; letter-spacing:.3px; }
+
+    .flag { font-size: 16px; }
+
+    .num-value { font-weight: 600; font-size: 13px; }
+
+    .change-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .change-pill.up   { background: rgba(62,207,142,.12); color: var(--green); }
+    .change-pill.down { background: rgba(245,101,101,.12); color: var(--red); }
+
+    /* ── Right panel ── */
+    .side-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .panel-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* Allocation legend */
+    .alloc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .alloc-left { display: flex; align-items: center; gap: 8px; min-width: 130px; }
+    .alloc-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .alloc-bar-wrap { flex: 1; height: 4px; background: var(--surface2); border-radius: 4px; margin: 0 10px; }
+    .alloc-bar { height: 4px; border-radius: 4px; }
+    .alloc-right-group { display: flex; align-items: center; gap: 6px; }
+    .cs-expand-btn { font-size: 14px; font-weight: 700; color: var(--accent); line-height: 1; width: 16px; text-align: center; cursor:pointer; }
+    .cs-parent:hover .cs-expand-btn { opacity: .7; }
+    .cs-child { padding-left: 18px; margin-bottom: 8px; opacity: .85; }
+    .cs-holding { padding-left: 36px; margin-bottom: 6px; opacity: .75; }
+    .cs-holding-direct { padding-left: 18px; margin-bottom: 6px; opacity: .75; }
+
+    /* ── Market Indexes ── */
+    .idx-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .idx-row:last-child { border-bottom: none; }
+    .idx-name { color: var(--text); font-weight: 600; min-width: 110px; }
+    .idx-price { color: var(--muted); font-size: 11px; }
+    .idx-chg { font-weight: 700; font-size: 12px; min-width: 60px; text-align: right; }
+    .idx-chg.pos { color: var(--green); }
+    .idx-chg.neg { color: var(--red); }
+    .idx-loading { color: var(--muted); font-size: 11px; padding: 4px 0; }
+
+    canvas { display: block; }
+
+    /* ── Transactions table ── */
+    .txn-date   { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .txn-sym    { font-weight: 700; font-size: 13px; }
+    .txn-cost   { color: var(--muted); }
+    .txn-badge  { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .txn-buy    { background: rgba(92,124,250,.15); color: var(--accent); }
+    .txn-sell   { background: rgba(245,101,101,.15); color: var(--red); }
+
+    .empty-row td {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      header { padding: 16px; }
+      main   { padding: 16px 12px; }
+      .card-value { font-size: 16px; }
+      th.hide-sm, td.hide-sm { display: none; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .card  { aspect-ratio: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+    }
+
+    /* ── Light / Day theme ─────────────────────── */
+    body.light {
+      --bg:       #f0f4fc;
+      --surface:  #ffffff;
+      --surface2: #e8edf8;
+      --border:   #cdd5eb;
+      --text:     #1a1d2e;
+      --muted:    #6b769a;
+      --green:    #0ea572;
+      --red:      #dc2626;
+      --gold:     #d97706;
+    }
+    body.light header {
+      background: linear-gradient(135deg, #ffffff 0%, #f0f4fc 100%);
+    }
+    body.light .badge-stock  { background: #dbeafe; color: #1d4ed8; }
+    body.light .badge-etf    { background: #d1fae5; color: #065f46; }
+    body.light .badge-crypto { background: #fef3c7; color: #b45309; }
+    body.light .badge-bond   { background: #ede9fe; color: #5b21b6; }
+    body.light .badge-other  { background: #f3f4f6; color: #4b5563; }
+    body.light .exch-nasdaq  { background: #dbeafe; color: #1e40af; }
+    body.light .exch-nyse    { background: #d1fae5; color: #065f46; }
+    body.light .exch-tase    { background: #fef3c7; color: #92400e; }
+    body.light .stale-badge  { background: #fef3c7; color: #92400e; }
+    body.light .change-pill.up   { background: rgba(14,165,114,.12); }
+    body.light .change-pill.down { background: rgba(220,38,38,.1); }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 15px;
+      cursor: pointer;
+      line-height: 1.5;
+      transition: border-color .2s;
+      color: var(--text);
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
+
+    /* ── Expand rows ── */
+    .asset-row { cursor: pointer; }
+    .expand-arrow {
+      color: var(--muted); font-size: 9px;
+      display: inline-block; transition: transform .15s;
+      margin-right: 5px; vertical-align: middle;
+    }
+    .asset-row.expanded .expand-arrow { transform: rotate(90deg); color: var(--accent); }
+
+    .detail-row { background: var(--bg) !important; }
+    .detail-row:hover { background: var(--bg) !important; }
+    .detail-row > td { padding: 0 !important; border-bottom: 1px solid var(--border) !important; }
+    .detail-inner { padding: 6px 20px 14px 48px; }
+    .detail-inner-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .7px;
+      color: var(--accent); margin-bottom: 6px; padding-top: 8px;
+    }
+    .lot-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .lot-table th {
+      padding: 5px 10px; font-size: 10px; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--muted); text-align: left;
+      border-bottom: 1px solid var(--border); font-weight: 500;
+    }
+    .lot-table th.num, .lot-table td.num { text-align: right; }
+    .lot-table td { padding: 7px 10px; border-bottom: 1px solid rgba(46,51,80,.2); color: var(--text); }
+    body.light .lot-table td { border-bottom: 1px solid rgba(180,195,225,.4); }
+    .lot-table tr:last-child td { border-bottom: none; }
+
+    /* ── Table view tabs ── */
+    .table-tabs {
+      display: flex;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-tab {
+      background: none;
+      border: none;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all .15s;
+    }
+    .table-tab:hover { color: var(--text); }
+    .table-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Return chart panel ── */
+    .return-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .return-panel-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .return-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .return-stats { display: flex; gap: 28px; flex-wrap: wrap; }
+    .return-stat { display: flex; flex-direction: column; }
+    .return-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 3px; }
+    .return-stat-value { font-size: 18px; font-weight: 700; }
+    .period-tabs { display: flex; gap: 4px; }
+    .period-tab {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 11px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .period-tab:hover { color: var(--text); border-color: var(--accent); }
+    .period-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Refresh button ── */
+    .refresh-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .refresh-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn:disabled { opacity: .6; cursor: default; }
+    .refresh-btn.auto-on { border-color: var(--green); color: var(--green); }
+    .refresh-btn.auto-on:hover:not(:disabled) { border-color: var(--green); opacity: .8; }
+
+    /* ── Return method toggle (TWR / Dietz) ── */
+    .return-method-toggle { display: flex; align-items: center; gap: 4px; }
+    .method-btn {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 10px;
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .method-btn.active { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+    .method-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Clear filters button ── */
+    .clear-filters-btn {
+      display: none; align-items: center; gap: 4px;
+      background: none; border: 1px solid var(--red);
+      border-radius: 6px; padding: 4px 10px;
+      font-size: 11px; font-weight: 600; color: var(--red);
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .clear-filters-btn:hover { background: rgba(245,101,101,.1); }
+
+    /* ── Portfolio Insights ── */
+    .insight-card {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .insight-card:last-of-type { border-bottom: none; }
+    .insight-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .insight-body { flex: 1; min-width: 0; }
+    .insight-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .insight-desc  { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .insight-warning .insight-title { color: #f6ad55; }
+    .insight-positive .insight-title { color: var(--green); }
+    .insight-footer { font-size: 10px; color: var(--muted); text-align: center; padding-top: 8px; opacity: .6; }
+
+    /* ── Target Allocation / Gap Analysis ── */
+    .cash-panel-input { display:flex; gap:6px; margin-top:6px; }
+    .cash-input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text); font-size:12px; outline:none; transition:border .15s; min-width:0; }
+    .cash-input:focus { border-color:var(--accent); }
+    .analyze-btn { background:var(--accent); border:none; border-radius:6px; padding:6px 14px; font-size:11px; font-weight:700; color:#fff; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+    .analyze-btn:hover { opacity:.85; }
+    .gap-total-bar { margin-top:10px; padding:8px 10px; background:var(--surface2); border-radius:6px; font-size:11px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); }
+    .gap-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:11px; }
+    .gap-table th { color:var(--muted); font-weight:600; padding:0 0 5px; text-align:left; border-bottom:1px solid var(--border); }
+    .gap-table th:not(:first-child) { text-align:right; }
+    .gap-table td { padding:5px 0; border-bottom:1px solid rgba(255,255,255,.04); color:var(--text); }
+    .gap-table td:not(:first-child) { text-align:right; }
+    .gap-table tr:last-child td { border-bottom:none; }
+    .gap-pos { color:var(--green); font-weight:700; }
+    .gap-neg { color:var(--red); font-weight:700; }
+    .gap-ok  { color:var(--muted); }
+    .gap-label { font-weight:600; font-size:11px; }
+    .gap-action { font-size:10px; color:var(--muted); display:block; margin-top:1px; }
+    .gap-sort-th { cursor:pointer; user-select:none; white-space:nowrap; }
+    .gap-sort-th:hover { color:var(--text); }
+    /* Inline target spinners in gap table */
+    .tgt-spin { display:inline-flex; align-items:center; gap:4px; justify-content:flex-end; }
+    .tgt-spin-col { display:flex; flex-direction:column; gap:0; }
+    .tgt-spin-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:8px; padding:1px 3px; line-height:1.1; border-radius:2px; transition:color .12s, background .12s; }
+    .tgt-spin-btn:hover { color:var(--text); background:var(--surface2); }
+    .gap-free-cash { margin-top:10px; padding:8px 10px; background:var(--surface2); border-radius:6px; font-size:11px; font-weight:700; }
+    /* Target allocation editor */
+    .tgt-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; margin-top:8px; }
+    .tgt-edit-row { display:flex; align-items:center; gap:5px; }
+    .tgt-edit-label { font-size:11px; color:var(--muted); flex:1; }
+    .tgt-edit-input { width:54px; background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:3px 6px; color:var(--text); font-size:12px; text-align:right; outline:none; transition:border .15s; }
+    .tgt-edit-input:focus { border-color:var(--accent); }
+    .tgt-edit-pct { font-size:11px; color:var(--muted); }
+    .tgt-sum-bar { margin-top:8px; padding:5px 8px; border-radius:6px; font-size:11px; display:flex; justify-content:space-between; align-items:center; }
+    .tgt-save-btn { margin-top:8px; width:100%; background:var(--accent); border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:700; color:#fff; cursor:pointer; transition:opacity .15s; }
+    .tgt-save-btn:hover { opacity:.85; }
+    .tgt-reset-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:10px; color:var(--muted); cursor:pointer; transition:opacity .15s; margin-left:6px; }
+    .tgt-reset-btn:hover { opacity:.7; }
+
+    /* ── Sunburst chart ── */
+    .sb-seg { cursor:pointer; transition:opacity .35s ease, filter .35s ease; }
+
+    /* ── Trade button ── */
+    .trade-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .trade-btn:hover { opacity: .85; }
+
+    /* ── Trade modal ── */
+    .trade-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .trade-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 420px; max-width: calc(100vw - 32px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    }
+    .trade-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .trade-tabs { display: flex; gap: 6px; }
+    .trade-tab {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 18px;
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .trade-tab:not(.active):hover { color: var(--text); }
+    .trade-tab.active.buy  { background: var(--green); border-color: var(--green); color: #fff; }
+    .trade-tab.active.sell { background: var(--red);   border-color: var(--red);   color: #fff; }
+    .trade-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 18px; cursor: pointer; padding: 2px 6px;
+      border-radius: 4px; transition: color .15s; line-height: 1;
+    }
+    .trade-close:hover { color: var(--text); }
+    .trade-body { padding: 20px; }
+    .trade-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .trade-field label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+    .trade-field input, .trade-field select {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px;
+      color: var(--text); font-size: 13px; outline: none;
+      transition: border-color .2s;
+    }
+    .trade-field input:focus, .trade-field select:focus { border-color: var(--accent); }
+    .trade-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .trade-submit {
+      width: 100%; border: none; border-radius: 8px;
+      padding: 10px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s; margin-top: 4px;
+    }
+    .trade-submit.buy  { background: var(--green); color: #fff; }
+    .trade-submit.sell { background: var(--red);   color: #fff; }
+    .trade-submit:hover { opacity: .85; }
+    .trade-msg { font-size: 12px; color: var(--muted); margin-top: 10px; text-align: center; min-height: 18px; }
+    .trade-reset { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
+    .trade-reset button { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
+    .trade-reset button:hover { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">My <span>Portfolio</span></div>
+  <div class="header-meta">
+    <div class="fx-badge">
+      <span class="fx-live-dot loading" id="fxDot"></span>
+      USD / NIS
+      <strong class="fx-rate-value" id="fxRateDisplay">—</strong>
+      <span class="fx-updated" id="fxUpdated"></span>
+    </div>
+    <div class="currency-toggle">
+      <button id="btnUSD" onclick="setCurrency('USD')">USD</button>
+      <button id="btnNIS" class="active" onclick="setCurrency('NIS')">NIS</button>
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle day/night">🌙</button>
+    <button class="refresh-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="Auto-refresh every 5 min during market hours">⏸ Auto</button>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshPrices()" title="Refresh live prices">↻ Refresh</button>
+    <button class="trade-btn" onclick="openTradeModal()">+ Trade</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Summary cards -->
+  <div class="cards">
+    <div class="card purple">
+      <div class="card-label">Today's Change</div>
+      <div class="card-value" id="c-today">—</div>
+      <div class="card-sub" id="c-today-sub">—</div>
+    </div>
+    <div class="card blue">
+      <div class="card-label">Total Value</div>
+      <div class="card-value" id="c-total">—</div>
+      <div class="card-sub" id="c-total-sub">across all assets</div>
+    </div>
+    <div class="card green">
+      <div class="card-label">Total Gain / Loss</div>
+      <div class="card-value" id="c-gain">—</div>
+      <div class="card-sub" id="c-gain-sub">—</div>
+    </div>
+    <div class="card gold">
+      <div class="card-label">Invested Cost</div>
+      <div class="card-value" id="c-cost">—</div>
+      <div class="card-sub" id="c-cost-sub">—</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Assets</div>
+      <div class="card-value" id="c-assets">—</div>
+      <div class="card-sub" id="c-assets-sub">positions</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <span class="filter-label">Country</span>
+    <div class="filter-group" id="countryFilters">
+      <button class="pill active" data-group="country" data-val="All">All</button>
+      <button class="pill" data-group="country" data-val="USA">🇺🇸 USA</button>
+      <button class="pill" data-group="country" data-val="Israel">🇮🇱 Israel</button>
+      <button class="pill" data-group="country" data-val="Europe">🇪🇺 Europe</button>
+      <button class="pill" data-group="country" data-val="Bitcoin">₿ Bitcoin</button>
+    </div>
+    <div class="divider"></div>
+    <span class="filter-label">Type</span>
+    <div class="filter-group" id="typeFilters">
+      <button class="pill active" data-group="type" data-val="All">All</button>
+      <button class="pill" data-group="type" data-val="Stock">Stock</button>
+      <button class="pill" data-group="type" data-val="ETF">ETF</button>
+    </div>
+    <div class="divider"></div>
+    <span class="filter-label">Exchange</span>
+    <div class="filter-group" id="exchangeFilters">
+      <button class="pill active" data-group="exchange" data-val="All">All</button>
+      <button class="pill" data-group="exchange" data-val="NASDAQ">NASDAQ</button>
+      <button class="pill" data-group="exchange" data-val="NYSE">NYSE</button>
+      <button class="pill" data-group="exchange" data-val="TASE">TASE</button>
+    </div>
+    <button class="clear-filters-btn" id="clearFiltersBtn" onclick="clearFilters()">✕ Clear filters</button>
+    <input class="search-input" type="text" id="searchBox" placeholder="Search symbol or name…" />
+  </div>
+
+  <!-- Bottom: table + side panel -->
+  <div class="bottom-grid">
+
+    <div class="table-wrap">
+      <div class="table-title">
+        <span id="tableTitle">Holdings</span>
+        <span class="row-count" id="rowCount">0 assets</span>
+      </div>
+      <div class="table-tabs">
+        <button class="table-tab active" data-view="performance" onclick="setTableView('performance')">Performance</button>
+        <button class="table-tab" data-view="charts" onclick="setTableView('charts')">📊 Charts</button>
+        <button class="table-tab" data-view="transactions" onclick="setTableView('transactions')">Transactions</button>
+        <button class="table-tab" data-view="position" onclick="setTableView('position')">Position</button>
+      </div>
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <!-- Charts sub-toggle (Sunburst / Heatmap) -->
+      <div id="chartSubToggle" style="display:none;padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div class="return-method-toggle">
+          <button class="method-btn chart-sub-btn active" data-sub="sunburst" onclick="setChartsSubView('sunburst')">🍩 Sunburst</button>
+          <button class="method-btn chart-sub-btn" data-sub="heatmap" onclick="setChartsSubView('heatmap')">🌡️ Heatmap</button>
+        </div>
+      </div>
+      <!-- Sunburst view -->
+      <div id="sunburstView" style="display:none;padding:20px 8px;width:100%"></div>
+      <!-- Heatmap view -->
+      <div id="heatmapView" style="display:none;padding:12px 8px;width:100%"></div>
+    </div>
+
+    <div class="side-panel">
+      <!-- Market Indexes -->
+      <div class="panel">
+        <div class="panel-title">Market Indexes</div>
+        <div id="marketIndexes"><div style="color:var(--muted);font-size:12px;padding:8px 0">Loading…</div></div>
+      </div>
+
+      <!-- Country Split with expandable segments -->
+      <div class="panel">
+        <div class="panel-title">Country Split</div>
+        <div id="countryChart"></div>
+      </div>
+
+      <!-- Target Allocation & Cash Input (before insights for better flow) -->
+      <div class="panel">
+        <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+          Target Allocation
+          <button class="tgt-reset-btn" onclick="resetTargets()" title="Reset to defaults">↺ Reset</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Use ▲▼ in the TARGET column to adjust. Cash isn't tracked — enter it below to analyze gaps.</div>
+
+        <!-- Cash input + gap analysis -->
+        <label style="font-size:11px;font-weight:600;color:var(--text)">Cash in hand (₪)</label>
+        <div class="cash-panel-input" style="margin-top:4px">
+          <input class="cash-input" type="number" id="cashInput" placeholder="e.g. 50000" min="0" oninput="saveCash()" />
+          <button class="analyze-btn" onclick="analyzeGaps()">📊 Analyze</button>
+        </div>
+        <div id="gapAnalysis" style="margin-top:4px"></div>
+      </div>
+
+      <!-- Portfolio Insights -->
+      <div class="panel">
+        <div class="panel-title">Portfolio Insights</div>
+        <div id="portfolioInsights"><div style="color:var(--muted);font-size:12px;padding:8px 0">Analysing…</div></div>
+      </div>
+
+      <!-- Watchlist Opportunities -->
+      <div class="panel">
+        <div class="panel-title">🔭 Watchlist Opportunities</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Top picks not yet in your portfolio — based on your strategy &amp; risk profile</div>
+        <div id="watchlistInsights"><div style="color:var(--muted);font-size:12px;padding:8px 0">Loading…</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Return chart (shown only in performance view) -->
+  <div id="returnChartWrap" class="return-panel"></div>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+// PORTFOLIO DATA  — as of 05/03/2026
+// ─────────────────────────────────────────────
+const PORTFOLIO = [
+  // segment: 'Bitcoin' | 'IL' | 'Europe' | 'USA ETF' | 'US Stocks'
+  // ── US Stocks ──
+  { symbol:'NVDA',      name:'NVIDIA',                   type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:100,     avgCost:10.20,    avgCostCurrency:'USD', currentPrice:183.36,  currentCurrency:'USD', dailyChangePct: 0.17  },
+  { symbol:'ASML',      name:'ASML Holding',             type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'Europe',    qty:7,       avgCost:702.24,   avgCostCurrency:'USD', currentPrice:1368.84, currentCurrency:'USD', dailyChangePct:-2.18  },
+  { symbol:'AAPL',      name:'Apple',                    type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:37,      avgCost:138.62,   avgCostCurrency:'USD', currentPrice:260.29,  currentCurrency:'USD', dailyChangePct:-0.85  },
+  { symbol:'MSFT',      name:'Microsoft',                type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:14,      avgCost:267.89,   avgCostCurrency:'USD', currentPrice:410.61,  currentCurrency:'USD', dailyChangePct: 1.34  },
+  { symbol:'AMZN',      name:'Amazon',                   type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:49,      avgCost:172.30,   avgCostCurrency:'USD', currentPrice:218.94,  currentCurrency:'USD', dailyChangePct: 0.98  },
+  { symbol:'INTC',      name:'Intel',                    type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:202,     avgCost:25.30,    avgCostCurrency:'USD', currentPrice:45.96,   currentCurrency:'USD', dailyChangePct: 0.83  },
+  { symbol:'GOOGL',     name:'Alphabet A',               type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:10,      avgCost:326.40,   avgCostCurrency:'USD', currentPrice:300.88,  currentCurrency:'USD', dailyChangePct:-0.74  },
+  { symbol:'BRKb',      name:'Berkshire Hathaway B',     type:'ETF',   exchange:'NYSE',   country:'USA',    segment:'USA ETF',   qty:22,      avgCost:320.26,   avgCostCurrency:'USD', currentPrice:500.29,  currentCurrency:'USD', dailyChangePct: 2.63  },
+  { symbol:'NET',       name:'Cloudflare',               type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:30,      avgCost:77.60,    avgCostCurrency:'USD', currentPrice:192.31,  currentCurrency:'USD', dailyChangePct: 3.45  },
+  { symbol:'MA',        name:'Mastercard',               type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:8,       avgCost:318.11,   avgCostCurrency:'USD', currentPrice:524.66,  currentCurrency:'USD', dailyChangePct: 0.33  },
+  { symbol:'ACN',       name:'Accenture',                type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:63,      avgCost:240.41,   avgCostCurrency:'USD', currentPrice:214.00,  currentCurrency:'USD', dailyChangePct: 1.90  },
+  { symbol:'DAL',       name:'Delta Airlines',           type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:100,     avgCost:32.72,    avgCostCurrency:'USD', currentPrice:61.31,   currentCurrency:'USD', dailyChangePct:-3.95  },
+  { symbol:'BA',        name:'Boeing',                   type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:18,      avgCost:136.92,   avgCostCurrency:'USD', currentPrice:222.06,  currentCurrency:'USD', dailyChangePct:-2.31  },
+  { symbol:'SEDG',      name:'SolarEdge',                type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:50,      avgCost:124.41,   avgCostCurrency:'USD', currentPrice:35.24,   currentCurrency:'USD', dailyChangePct:-7.12  },
+  { symbol:'MDB',       name:'MongoDB',                  type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:12,      avgCost:229.20,   avgCostCurrency:'USD', currentPrice:263.93,  currentCurrency:'USD', dailyChangePct: 6.42  },
+  { symbol:'TWLO',      name:'Twilio',                   type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:7,       avgCost:289.34,   avgCostCurrency:'USD', currentPrice:125.48,  currentCurrency:'USD', dailyChangePct: 2.02  },
+  { symbol:'GLBE',      name:'Global-E Online',          type:'Stock', exchange:'NASDAQ', country:'USA',    segment:'US Stocks', qty:30,      avgCost:69.15,    avgCostCurrency:'USD', currentPrice:36.65,   currentCurrency:'USD', dailyChangePct: 2.49  },
+  { symbol:'ESTC',      name:'Elastic',                  type:'Stock', exchange:'NYSE',   country:'USA',    segment:'US Stocks', qty:21,      avgCost:107.81,   avgCostCurrency:'USD', currentPrice:53.02,   currentCurrency:'USD', dailyChangePct: 2.26  },
+  // ── US ETFs ──
+  { symbol:'QQQM',      name:'Invesco NASDAQ 100 ETF',   type:'ETF',   exchange:'NASDAQ', country:'USA',    segment:'USA ETF',   qty:82,      avgCost:207.73,   avgCostCurrency:'USD', currentPrice:250.72,  currentCurrency:'USD', dailyChangePct:-0.26  },
+  { symbol:'VOO',       name:'Vanguard S&P 500 ETF',     type:'ETF',   exchange:'NYSE',   country:'USA',    segment:'USA ETF',   qty:22,      avgCost:548.29,   avgCostCurrency:'USD', currentPrice:626.86,  currentCurrency:'USD', dailyChangePct:-0.53  },
+  { symbol:'IBIT',      name:'iShares Bitcoin ETF',      type:'ETF',   exchange:'NASDAQ', country:'USA',    segment:'Bitcoin',   qty:105,     avgCost:55.33,    avgCostCurrency:'USD', currentPrice:40.39,   currentCurrency:'USD', dailyChangePct:-2.53  },
+  { symbol:'TAN',       name:'Invesco Solar Energy ETF', type:'ETF',   exchange:'NYSE',   country:'USA',    segment:'USA ETF',   qty:60,      avgCost:73.58,    avgCostCurrency:'USD', currentPrice:54.09,   currentCurrency:'USD', dailyChangePct:-1.42  },
+  { symbol:'QTUM',      name:'Defiance Quantum ETF',     type:'ETF',   exchange:'NASDAQ', country:'USA',    segment:'USA ETF',   qty:21,      avgCost:120.73,   avgCostCurrency:'USD', currentPrice:111.79,  currentCurrency:'USD', dailyChangePct:-1.76  },
+  // ── Israel — local market ──
+  { symbol:'BEZQ.TA',   name:'Bezeq',                    type:'Stock', exchange:'TASE',   country:'Israel', segment:'IL',        qty:1350,    avgCost:5.662,    avgCostCurrency:'NIS', currentPrice:8.999,   currentCurrency:'NIS', dailyChangePct: 0.67  },
+  { symbol:'KSMF74.TA', name:'Kesem TA-125 ETF',         type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:295,     avgCost:212.34,   avgCostCurrency:'NIS', currentPrice:421.90,  currentCurrency:'NIS', dailyChangePct: 1.25  },
+  { symbol:'KSMF57.TA', name:'Kesem TA Financials ETF',  type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:28,      avgCost:581.56,   avgCostCurrency:'NIS', currentPrice:986.40,  currentCurrency:'NIS', dailyChangePct: 0.46  },
+  { symbol:'HRLF15.TA', name:'Harel TA Real Estate ETF', type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:800,     avgCost:12.00,    avgCostCurrency:'NIS', currentPrice:15.25,   currentCurrency:'NIS', dailyChangePct: 3.39  },
+  // ── Israel-listed ETFs tracking Europe ──
+  { symbol:'TCHF12.TA', name:'Tachlit DAX 30 ETF (IL)',  type:'ETF',   exchange:'TASE',   country:'Israel', segment:'Europe',    qty:296.48,  avgCost:91.39,    avgCostCurrency:'NIS', currentPrice:205.90,  currentCurrency:'NIS', dailyChangePct:-0.53  },
+  { symbol:'iSFF301.TA',name:'iShares MSCI Europe (IL)', type:'ETF',   exchange:'TASE',   country:'Israel', segment:'Europe',    qty:227,     avgCost:288.95,   avgCostCurrency:'NIS', currentPrice:346.20,  currentCurrency:'NIS', dailyChangePct:-0.80  },
+  // ── Israel-listed ETFs tracking USA ──
+  { symbol:'iSFF501.TA',name:'iShares Technology (IL)',  type:'ETF',   exchange:'TASE',   country:'Israel', segment:'USA ETF',   qty:440,     avgCost:108.15,   avgCostCurrency:'NIS', currentPrice:123.30,  currentCurrency:'NIS', dailyChangePct: 0.98  },
+  { symbol:'INFF1.TA',  name:'Source S&P 500 UCITS (IL)',type:'ETF',   exchange:'TASE',   country:'Israel', segment:'USA ETF',   qty:1100,    avgCost:40.02,    avgCostCurrency:'NIS', currentPrice:42.15,   currentCurrency:'NIS', dailyChangePct: 0.14  },
+  { symbol:'iSFF702.TA',name:'iShares S&P 500 (IL)',     type:'ETF',   exchange:'TASE',   country:'Israel', segment:'USA ETF',   qty:5,       avgCost:1725.50,  avgCostCurrency:'NIS', currentPrice:2263.70, currentCurrency:'NIS', dailyChangePct: 0.29  },
+];
+
+// ─────────────────────────────────────────────
+// PURCHASE HISTORY  (prices already in native currency, TASE ÷100)
+// ─────────────────────────────────────────────
+const PURCHASE_HISTORY = {
+  'NVDA':      [{ date:'20/02/2020', qty:100,      price:10.20,    currency:'USD' }],
+  'ASML':      [{ date:'31/01/2022', qty:4,        price:666.80,   currency:'USD' },
+                { date:'13/08/2025', qty:3,        price:749.50,   currency:'USD' }],
+  'AAPL':      [{ date:'01/02/2021', qty:18,       price:133.65,   currency:'USD' },
+                { date:'09/03/2021', qty:3,        price:121.76,   currency:'USD' },
+                { date:'12/03/2021', qty:5,        price:120.79,   currency:'USD' },
+                { date:'27/12/2021', qty:4,        price:178.68,   currency:'USD' },
+                { date:'17/03/2022', qty:4,        price:159.72,   currency:'USD' },
+                { date:'13/06/2022', qty:3,        price:133.46,   currency:'USD' }],
+  'MSFT':      [{ date:'29/07/2022', qty:5,        price:281.06,   currency:'USD' },
+                { date:'03/08/2022', qty:4,        price:282.63,   currency:'USD' },
+                { date:'30/11/2022', qty:5,        price:242.92,   currency:'USD' }],
+  'AMZN':      [{ date:'02/06/2020', qty:8,        price:123.24,   currency:'USD' },
+                { date:'21/08/2020', qty:7,        price:164.11,   currency:'USD' },
+                { date:'30/12/2020', qty:9,        price:165.17,   currency:'USD' },
+                { date:'17/07/2023', qty:11,       price:134.04,   currency:'USD' },
+                { date:'23/01/2026', qty:14,       price:239.06,   currency:'USD' }],
+  'INTC':      [{ date:'25/08/2025', qty:202,      price:25.30,    currency:'USD' }],
+  'GOOGL':     [{ date:'20/01/2026', qty:10,       price:326.40,   currency:'USD' }],
+  'BRKb':      [{ date:'16/06/2021', qty:3,        price:283.35,   currency:'USD' },
+                { date:'18/06/2021', qty:1,        price:273.71,   currency:'USD' },
+                { date:'23/06/2021', qty:2,        price:275.48,   currency:'USD' },
+                { date:'28/07/2021', qty:3,        price:277.99,   currency:'USD' },
+                { date:'17/03/2022', qty:2,        price:342.46,   currency:'USD' },
+                { date:'27/07/2023', qty:11,       price:350.20,   currency:'USD' }],
+  'NET':       [{ date:'23/12/2020', qty:5,        price:82.85,    currency:'USD' },
+                { date:'31/12/2020', qty:25,       price:76.55,    currency:'USD' }],
+  'MA':        [{ date:'24/04/2020', qty:1.097,    price:257.81,   currency:'USD' },
+                { date:'05/11/2020', qty:4.646,    price:317.29,   currency:'USD' },
+                { date:'10/09/2021', qty:2.256,    price:349.13,   currency:'USD' }],
+  'ACN':       [{ date:'01/05/2023', qty:12,       price:236.88,   currency:'USD' },
+                { date:'01/11/2023', qty:9,        price:255.15,   currency:'USD' },
+                { date:'01/05/2024', qty:11,       price:255.68,   currency:'USD' },
+                { date:'01/05/2025', qty:14,       price:256.39,   currency:'USD' },
+                { date:'01/11/2025', qty:17,       price:212.05,   currency:'USD' }],
+  'DAL':       [{ date:'02/08/2022', qty:25,       price:32.34,    currency:'USD' },
+                { date:'30/12/2022', qty:75,       price:32.85,    currency:'USD' }],
+  'BA':        [{ date:'27/04/2020', qty:5.489,    price:129.39,   currency:'USD' },
+                { date:'29/05/2020', qty:1.952,    price:144.40,   currency:'USD' },
+                { date:'10/09/2021', qty:2.563,    price:212.73,   currency:'USD' },
+                { date:'13/06/2022', qty:7.996,    price:115.96,   currency:'USD' }],
+  'SEDG':      [{ date:'30/12/2022', qty:15,       price:278.20,   currency:'USD' },
+                { date:'15/02/2024', qty:15,       price:86.44,    currency:'USD' },
+                { date:'13/11/2025', qty:20,       price:37.54,    currency:'USD' }],
+  'MDB':       [{ date:'05/06/2020', qty:7,        price:199.98,   currency:'USD' },
+                { date:'31/03/2021', qty:5,        price:270.11,   currency:'USD' }],
+  'TWLO':      [{ date:'06/11/2020', qty:7,        price:289.34,   currency:'USD' }],
+  'GLBE':      [{ date:'21/09/2021', qty:30,       price:69.15,    currency:'USD' }],
+  'ESTC':      [{ date:'23/10/2020', qty:21,       price:107.81,   currency:'USD' }],
+  'QQQM':      [{ date:'10/03/2025', qty:11,       price:194.80,   currency:'USD' },
+                { date:'03/04/2025', qty:8,        price:187.65,   currency:'USD' },
+                { date:'14/04/2025', qty:16,       price:187.80,   currency:'USD' },
+                { date:'23/04/2025', qty:12,       price:187.30,   currency:'USD' },
+                { date:'23/05/2025', qty:15,       price:209.80,   currency:'USD' },
+                { date:'13/11/2025', qty:10,       price:251.39,   currency:'USD' },
+                { date:'24/02/2026', qty:10,       price:247.69,   currency:'USD' }],
+  'VOO':       [{ date:'26/04/2024', qty:5,        price:468.00,   currency:'USD' },
+                { date:'03/04/2025', qty:3,        price:499.70,   currency:'USD' },
+                { date:'06/05/2025', qty:5,        price:514.26,   currency:'USD' },
+                { date:'13/11/2025', qty:4,        price:620.49,   currency:'USD' },
+                { date:'23/01/2026', qty:5,        price:634.00,   currency:'USD' }],
+  'IBIT':      [{ date:'29/02/2024', qty:15,       price:35.80,    currency:'USD' },
+                { date:'05/05/2025', qty:25,       price:53.50,    currency:'USD' },
+                { date:'23/06/2025', qty:35,       price:57.75,    currency:'USD' },
+                { date:'27/08/2025', qty:30,       price:63.78,    currency:'USD' }],
+  'TAN':       [{ date:'07/10/2020', qty:35,       price:75.07,    currency:'USD' },
+                { date:'01/06/2023', qty:25,       price:71.50,    currency:'USD' }],
+  'QTUM':      [{ date:'28/01/2026', qty:21,       price:120.73,   currency:'USD' }],
+  'BEZQ.TA':   [{ date:'02/02/2022', qty:1350,     price:5.662,    currency:'NIS' }],
+  'KSMF74.TA': [{ date:'14/06/2023', qty:60,       price:179.90,   currency:'NIS' },
+                { date:'03/07/2023', qty:40,       price:176.20,   currency:'NIS' },
+                { date:'06/11/2023', qty:40,       price:171.70,   currency:'NIS' },
+                { date:'12/12/2023', qty:35,       price:177.90,   currency:'NIS' },
+                { date:'27/02/2025', qty:25,       price:249.00,   currency:'NIS' },
+                { date:'16/04/2025', qty:40,       price:247.10,   currency:'NIS' },
+                { date:'18/06/2025', qty:29,       price:273.70,   currency:'NIS' },
+                { date:'05/08/2025', qty:26,       price:294.50,   currency:'NIS' }],
+  'KSMF57.TA': [{ date:'08/05/2025', qty:15,       price:523.80,   currency:'NIS' },
+                { date:'30/06/2025', qty:13,       price:648.20,   currency:'NIS' }],
+  'HRLF15.TA': [{ date:'29/12/2021', qty:800,      price:12.00,    currency:'NIS' }],
+  'TCHF12.TA': [{ date:'26/11/2018', qty:296.48,   price:91.39,    currency:'NIS' }],
+  'iSFF301.TA':[{ date:'06/01/2022', qty:33,       price:241.00,   currency:'NIS' },
+                { date:'05/12/2022', qty:22,       price:231.20,   currency:'NIS' },
+                { date:'01/06/2023', qty:45,       price:272.00,   currency:'NIS' },
+                { date:'06/11/2023', qty:20,       price:279.20,   currency:'NIS' },
+                { date:'12/12/2023', qty:20,       price:285.90,   currency:'NIS' },
+                { date:'27/02/2025', qty:20,       price:321.90,   currency:'NIS' },
+                { date:'16/04/2025', qty:20,       price:329.20,   currency:'NIS' },
+                { date:'18/06/2025', qty:23,       price:343.30,   currency:'NIS' },
+                { date:'08/07/2025', qty:24,       price:337.20,   currency:'NIS' }],
+  'iSFF501.TA':[{ date:'20/07/2023', qty:100,      price:82.75,    currency:'NIS' },
+                { date:'10/04/2025', qty:40,       price:107.00,   currency:'NIS' },
+                { date:'12/05/2025', qty:140,      price:115.00,   currency:'NIS' },
+                { date:'21/05/2025', qty:85,       price:117.80,   currency:'NIS' },
+                { date:'05/06/2025', qty:75,       price:118.90,   currency:'NIS' }],
+  'INFF1.TA':  [{ date:'02/05/2024', qty:200,      price:36.90,    currency:'NIS' },
+                { date:'10/04/2025', qty:300,      price:40.08,    currency:'NIS' },
+                { date:'12/05/2025', qty:200,      price:40.82,    currency:'NIS' },
+                { date:'05/06/2025', qty:200,      price:41.32,    currency:'NIS' },
+                { date:'24/06/2025', qty:200,      price:40.94,    currency:'NIS' }],
+  'iSFF702.TA':[{ date:'07/08/2023', qty:5,        price:1725.50,  currency:'NIS' }],
+};
+
+// ─────────────────────────────────────────────
+// SELL HISTORY  (FIFO — lots sold, with realized gain)
+// ─────────────────────────────────────────────
+const SELL_HISTORY = {
+  'IBIT': [{ date:'23/02/2026', qty:60, sellPrice:37.08, currency:'USD',
+             costBasis:35.80, realizedGain:76.80, lots:[{qty:60, buyPrice:35.80, buyDate:'29/02/2024'}] }],
+};
+
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let displayCurrency = 'NIS';
+let fxRate = 3.68;
+let activeFilters = { country: new Set(['All']), type: new Set(['All']), exchange: new Set(['All']) };
+
+// Map each country pill value → which segments it includes
+const COUNTRY_SEGMENTS = {
+  'USA':     r => r.segment === 'US Stocks' || r.segment === 'USA ETF',
+  'Israel':  r => r.segment === 'IL',
+  'Europe':  r => r.segment === 'Europe',
+  'Bitcoin': r => r.segment === 'Bitcoin',
+};
+let sortKey = 'marketValue';
+let sortDir = 1;
+let typeChart, returnChart;
+let expandedSymbols = new Set();
+let tableView = 'performance';
+let returnChartPeriod = 'All';
+let returnMethod = 'dietz'; // 'dietz' | 'twr'
+// Historical price data (fetched once from Yahoo Finance)
+let historicalPrices  = {};   // { symbol: [{ms, price}, ...] }
+let historicalLoading = false;
+let historicalReady   = false;
+// Auto-refresh
+let autoRefreshEnabled = false;
+let autoRefreshTimer   = null;
+// Market index data cache (filled by loadMarketIndexes)
+let marketIndexData = [];
+
+// ── Target allocation & gap analysis ──
+// BRK-B is treated as a USA ETF (S&P 500 proxy)
+const TARGET_DEFAULTS = { cash:6, usa:35, europe:18, israel:20, bitcoin:3, stocks:18 };
+let TARGET_ALLOCATION = Object.assign({}, TARGET_DEFAULTS,
+  JSON.parse(localStorage.getItem('portfolioTargetAlloc') || 'null'));
+let gapAnalysisData = null;   // filled by analyzeGaps()
+let cashNIS = 0;              // manually entered cash in NIS
+let gapSortCol = 'gap';       // default sort: biggest gap first
+let gapSortDir = -1;          // -1 = desc (largest magnitude at top)
+// Transaction table sort state
+let txSortCol = 'date';
+let txSortDir = -1;           // newest first by default
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('themeToggle').textContent = isLight ? '🌙' : '☀️';
+  localStorage.setItem('portfolioTheme', isLight ? 'light' : 'dark');
+  renderCharts(); // refresh chart colors
+}
+// Init theme: use localStorage override if set, otherwise auto by time (06:00–19:00 = light)
+(function() {
+  const saved = localStorage.getItem('portfolioTheme');
+  const h = new Date().getHours();
+  const isLight = saved ? (saved === 'light') : (h >= 6 && h < 19);
+  if (isLight) {
+    document.body.classList.add('light');
+    document.getElementById('themeToggle').textContent = '🌙';
+  }
+})();
+
+let chartsSubView = 'sunburst'; // 'sunburst' or 'heatmap'
+
+function setChartsSubView(sub) {
+  chartsSubView = sub;
+  const sbView = document.getElementById('sunburstView');
+  const hmView = document.getElementById('heatmapView');
+  document.querySelectorAll('.chart-sub-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+  if (sub === 'sunburst') {
+    if (sbView) sbView.style.display = 'block';
+    if (hmView) hmView.style.display = 'none';
+    renderSunburst();
+  } else {
+    if (sbView) sbView.style.display = 'none';
+    if (hmView) hmView.style.display = 'block';
+    renderHeatmap();
+  }
+}
+
+function setTableView(view) {
+  tableView = view;
+  document.querySelectorAll('.table-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  const titleEl = document.getElementById('tableTitle');
+  const tableEl = document.querySelector('.table-wrap table');
+  const sbView  = document.getElementById('sunburstView');
+  const hmView  = document.getElementById('heatmapView');
+  const rcWrap  = document.getElementById('returnChartWrap');
+  const rcEl    = document.getElementById('rowCount');
+  const chartToggle = document.getElementById('chartSubToggle');
+  const grid    = document.querySelector('.bottom-grid');
+
+  // Reset all special modes first
+  grid?.classList.remove('sunburst-mode', 'heatmap-mode');
+  if (sbView) sbView.style.display = 'none';
+  if (hmView) hmView.style.display = 'none';
+  if (chartToggle) chartToggle.style.display = 'none';
+
+  // Populate the return chart wrapper once (lazy init)
+  if (rcWrap && !rcWrap.dataset.init) {
+    rcWrap.dataset.init = '1';
+    rcWrap.innerHTML = `
+      <div class="return-panel-title">Portfolio Return Over Time</div>
+      <div class="return-header">
+        <div class="return-stats">
+          <div class="return-stat">
+            <span class="return-stat-label">Portfolio Value</span>
+            <span class="return-stat-value" id="rs-value">—</span>
+          </div>
+          <div class="return-stat">
+            <span class="return-stat-label" id="rs-cost-label">Cost Invested</span>
+            <span class="return-stat-value" id="rs-cost">—</span>
+          </div>
+          <div class="return-stat">
+            <span class="return-stat-label" id="rs-return-label">Total Return</span>
+            <span class="return-stat-value" id="rs-return">—</span>
+          </div>
+          <div class="return-stat">
+            <span class="return-stat-label" id="rs-pct-label">Return %</span>
+            <span class="return-stat-value" id="rs-pct">—</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="return-method-toggle">
+            <button class="method-btn active" id="btnDietz" onclick="setReturnMethod('dietz')">Dietz</button>
+            <button class="method-btn" id="btnTWR" onclick="setReturnMethod('twr')">TWR</button>
+          </div>
+          <div class="period-tabs">
+            <button class="period-tab" data-period="1W" onclick="setReturnPeriod('1W')">1W</button>
+            <button class="period-tab" data-period="1M" onclick="setReturnPeriod('1M')">1M</button>
+            <button class="period-tab" data-period="YTD" onclick="setReturnPeriod('YTD')">YTD</button>
+            <button class="period-tab" data-period="1Y" onclick="setReturnPeriod('1Y')">1Y</button>
+            <button class="period-tab" data-period="3Y" onclick="setReturnPeriod('3Y')">3Y</button>
+            <button class="period-tab active" data-period="All" onclick="setReturnPeriod('All')">All</button>
+          </div>
+        </div>
+      </div>
+      <canvas id="returnChart" height="80"></canvas>`;
+  }
+
+  // Show return chart only in performance view
+  if (rcWrap) rcWrap.style.display = (view === 'performance') ? '' : 'none';
+
+  if (view === 'charts') {
+    if (titleEl) titleEl.textContent = 'Charts';
+    if (tableEl) tableEl.style.display = 'none';
+    if (rcEl)    rcEl.style.display    = 'none';
+    if (chartToggle) chartToggle.style.display = '';
+    grid?.classList.add('sunburst-mode');
+    setChartsSubView(chartsSubView);
+  } else {
+    if (titleEl) titleEl.textContent = view === 'transactions' ? 'Transactions' : 'Holdings';
+    if (tableEl) tableEl.style.display = '';
+    if (rcEl)    rcEl.style.display    = '';
+    renderTable();
+  }
+}
+
+function setReturnPeriod(period) {
+  returnChartPeriod = period;
+  document.querySelectorAll('.period-tab').forEach(t => t.classList.toggle('active', t.dataset.period === period));
+  renderReturnChart();
+}
+
+function setReturnMethod(method) {
+  returnMethod = method;
+  document.getElementById('btnDietz').classList.toggle('active', method === 'dietz');
+  document.getElementById('btnTWR').classList.toggle('active', method === 'twr');
+  renderReturnChart();
+}
+
+// TWR (Time Weighted Return): chains sub-period returns, eliminating cash flow timing effects.
+// Each sub-period runs between consecutive cash flow dates.
+// R = ∏(V_end_before_CF / V_start_after_prev_CF) − 1
+function computeTWR(startMs, endMs) {
+  if (!historicalReady) return null; // need real prices for accurate TWR
+
+  // Collect all cash flows in the period, grouped by date
+  const cfMap = {};
+  Object.entries(PURCHASE_HISTORY).forEach(([sym, lots]) => {
+    lots.forEach(lot => {
+      const [d, m, y] = lot.date.split('/').map(Number);
+      const lotMs = new Date(y, m-1, d).getTime();
+      if (lotMs > startMs && lotMs <= endMs) {
+        cfMap[lotMs] = (cfMap[lotMs] || 0) + toDisplay(lot.qty * lot.price, lot.currency);
+      }
+    });
+  });
+
+  const cfDates = Object.keys(cfMap).map(Number).sort();
+  const dates   = [startMs, ...cfDates, endMs];
+
+  let twr = 1;
+  for (let i = 0; i < dates.length - 1; i++) {
+    const t0  = dates[i];
+    const t1  = dates[i + 1];
+    const v0  = realPortfolioValueAt(t0);          // start of sub-period (after any CF at t0)
+    const cf1 = cfMap[t1] || 0;
+    const v1  = realPortfolioValueAt(t1) - cf1;    // end of sub-period (before CF at t1)
+    if (v0 > 0 && v1 > 0) twr *= (v1 / v0);
+  }
+  return twr - 1;
+}
+
+const COLORS = ['#5c7cfa','#3ecf8e','#f6ad55','#f56565','#b794f4','#63b3ed','#fc8181'];
+const TYPE_COLORS = { Stock:'#5c7cfa', ETF:'#3ecf8e', Crypto:'#f6ad55', Bond:'#b794f4', Other:'#7b82a8' };
+
+// ─────────────────────────────────────────────
+// Currency helpers
+// ─────────────────────────────────────────────
+function toDisplay(amount, fromCurrency) {
+  if (fromCurrency === displayCurrency) return amount;
+  if (displayCurrency === 'USD' && fromCurrency === 'NIS') return amount / fxRate;
+  if (displayCurrency === 'NIS' && fromCurrency === 'USD') return amount * fxRate;
+  return amount;
+}
+
+function fmt(value) {
+  const sym = displayCurrency === 'USD' ? '$' : '₪';
+  if (Math.abs(value) >= 1e6) return sym + (value/1e6).toFixed(2) + 'M';
+  if (Math.abs(value) >= 1e3) return sym + (value/1e3).toFixed(1) + 'K';
+  return sym + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtPrice(value, currency) {
+  const native = currency === 'NIS' ? '₪' : '$';
+  return native + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ─────────────────────────────────────────────
+// Computed row data
+// ─────────────────────────────────────────────
+function computeRow(r) {
+  const marketValue = toDisplay(r.currentPrice * r.qty, r.currentCurrency);
+  const cost        = toDisplay(r.avgCost * r.qty,      r.avgCostCurrency);
+  const gainAbs     = marketValue - cost;
+  const gainPct     = cost !== 0 ? (gainAbs / cost) * 100 : 0;
+  return { ...r, marketValue, cost, gainAbs, gainPct };
+}
+
+// ─────────────────────────────────────────────
+// Filter + sort
+// ─────────────────────────────────────────────
+function getFiltered() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  return PORTFOLIO
+    .filter(r => {
+      if (!activeFilters.country.has('All')) {
+        const passes = [...activeFilters.country].some(val => COUNTRY_SEGMENTS[val]?.(r));
+        if (!passes) return false;
+      }
+      if (!activeFilters.type.has('All')     && !activeFilters.type.has(r.type))         return false;
+      if (!activeFilters.exchange.has('All') && !activeFilters.exchange.has(r.exchange)) return false;
+      if (q && !r.symbol.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q)) return false;
+      return true;
+    })
+    .map(computeRow)
+    .sort((a, b) => {
+      const av = a[sortKey]; const bv = b[sortKey];
+      if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+      return sortDir * (bv - av);
+    });
+}
+
+// ─────────────────────────────────────────────
+// Render table
+// ─────────────────────────────────────────────
+function buildDetailRowHtml(r, colCount) {
+  const lots = PURCHASE_HISTORY[r.symbol];
+  if (!lots || !lots.length) return '';
+  const lotRows = lots.map(lot => {
+    const lotCost  = toDisplay(lot.qty * lot.price,      lot.currency);
+    const lotValue = toDisplay(lot.qty * r.currentPrice, r.currentCurrency);
+    const lotGain  = lotValue - lotCost;
+    const lotPct   = lotCost !== 0 ? (lotGain / lotCost) * 100 : 0;
+    const up = lotGain >= 0;
+    return `<tr>
+      <td>${lot.date}</td>
+      <td class="num">${lot.qty % 1 === 0 ? lot.qty : lot.qty.toFixed(3)}</td>
+      <td class="num">${fmtPrice(lot.price, lot.currency)}</td>
+      <td class="num">${fmt(lotCost)}</td>
+      <td class="num">${fmt(lotValue)}</td>
+      <td class="num ${up?'up':'down'}" style="font-weight:600">${up?'+':''}${fmt(lotGain)}</td>
+      <td class="num"><span class="change-pill ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(lotPct).toFixed(1)}%</span></td>
+    </tr>`;
+  }).join('');
+  return `<tr class="detail-row">
+    <td colspan="${colCount}">
+      <div class="detail-inner">
+        <div class="detail-inner-title">Purchase History — ${r.symbol}</div>
+        <table class="lot-table">
+          <thead><tr>
+            <th>Date</th><th class="num">Qty</th><th class="num">Buy Price</th>
+            <th class="num">Cost</th><th class="num">Current Value</th>
+            <th class="num">Gain / Loss</th><th class="num">Return</th>
+          </tr></thead>
+          <tbody>${lotRows}</tbody>
+        </table>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function sortTxTable(col) {
+  if (txSortCol === col) { txSortDir *= -1; } else { txSortCol = col; txSortDir = (col === 'date') ? -1 : 1; }
+  renderTransactions();
+}
+
+function renderTransactions() {
+  const thead = document.getElementById('tableHead');
+  const tbody = document.getElementById('tableBody');
+
+  // Build flat list: BUY transactions
+  const filteredSymbols = new Set(getFiltered().map(r => r.symbol));
+  // Also include symbols that were fully sold (exist in SELL_HISTORY but not PORTFOLIO)
+  Object.keys(SELL_HISTORY).forEach(sym => filteredSymbols.add(sym));
+
+  const txns = [];
+
+  // ── BUY transactions ──
+  Object.entries(PURCHASE_HISTORY).forEach(([symbol, lots]) => {
+    if (!filteredSymbols.has(symbol)) return;
+    const r = PORTFOLIO.find(p => p.symbol === symbol);
+    if (!r) return;
+    lots.forEach(lot => {
+      const [d, m, y] = lot.date.split('/').map(Number);
+      const date        = new Date(y, m-1, d);
+      const costBasis   = toDisplay(lot.qty * lot.price, lot.currency);
+      const currentVal  = toDisplay(lot.qty * r.currentPrice, r.currentCurrency);
+      const gain        = currentVal - costBasis;
+      const gainPct     = costBasis ? gain / costBasis * 100 : 0;
+      const monthsHeld  = Math.max(0.1, (Date.now() - date.getTime()) / (30.4375 * 24 * 3600 * 1000));
+      const monthlyRet  = gainPct / monthsHeld;
+      txns.push({ txType:'BUY', date, symbol, name: r.name, type: r.type, exchange: r.exchange,
+                  qty: lot.qty, price: lot.price, priceCurrency: lot.currency,
+                  costBasis, currentVal, gain, gainPct, monthlyRet, monthsHeld });
+    });
+  });
+
+  // ── SELL transactions ──
+  Object.entries(SELL_HISTORY).forEach(([symbol, sells]) => {
+    if (!filteredSymbols.has(symbol)) return;
+    const r = PORTFOLIO.find(p => p.symbol === symbol);
+    sells.forEach(sell => {
+      const [d, m, y] = sell.date.split('/').map(Number);
+      const date       = new Date(y, m-1, d);
+      const proceeds   = toDisplay(sell.qty * sell.sellPrice, sell.currency);
+      const costBasis  = toDisplay(sell.qty * sell.costBasis, sell.currency);
+      const gain       = proceeds - costBasis;
+      const gainPct    = costBasis ? gain / costBasis * 100 : 0;
+      // For sells, "months held" = avg hold time of the lots sold
+      let avgBuyDate = date;
+      if (sell.lots && sell.lots.length) {
+        const totalDays = sell.lots.reduce((s, l) => {
+          const [bd, bm, by] = l.buyDate.split('/').map(Number);
+          return s + l.qty * ((date - new Date(by, bm-1, bd)) / (24*3600*1000));
+        }, 0);
+        const avgDays = totalDays / sell.qty;
+        avgBuyDate = new Date(date.getTime() - avgDays * 24*3600*1000);
+      }
+      const monthsHeld = Math.max(0.1, (date - avgBuyDate) / (30.4375 * 24 * 3600 * 1000));
+      const monthlyRet = gainPct / monthsHeld;
+      txns.push({ txType:'SELL', date, symbol, name: r ? r.name : symbol, type: r ? r.type : '',
+                  exchange: r ? r.exchange : '',
+                  qty: sell.qty, price: sell.sellPrice, priceCurrency: sell.currency,
+                  costBasis, currentVal: proceeds, gain, gainPct, monthlyRet, monthsHeld });
+    });
+  });
+
+  // Dynamic sort
+  txns.sort((a, b) => {
+    const colMap = { date:'date', symbol:'symbol', qty:'qty', costBasis:'costBasis',
+                     currentVal:'currentVal', gain:'gain', gainPct:'gainPct', monthlyRet:'monthlyRet' };
+    const key = colMap[txSortCol] || 'date';
+    const av = a[key], bv = b[key];
+    if (av instanceof Date) return txSortDir * (av - bv);
+    if (typeof av === 'string') return txSortDir * av.localeCompare(bv);
+    return txSortDir * (av - bv);
+  });
+
+  document.getElementById('rowCount').textContent = txns.length + ' transaction' + (txns.length !== 1 ? 's' : '');
+
+  const txArrow = col => {
+    if (txSortCol !== col) return '<span style="opacity:.25;font-size:9px">⇅</span>';
+    return `<span style="color:var(--accent);font-size:10px">${txSortDir > 0 ? '↑' : '↓'}</span>`;
+  };
+  const thStyle = 'style="cursor:pointer;user-select:none;white-space:nowrap"';
+
+  thead.innerHTML = `<tr>
+    <th ${thStyle} onclick="sortTxTable('date')">Date ${txArrow('date')}</th>
+    <th ${thStyle} onclick="sortTxTable('symbol')">Asset ${txArrow('symbol')}</th>
+    <th class="num" ${thStyle} onclick="sortTxTable('qty')">Qty ${txArrow('qty')}</th>
+    <th class="num">Price</th>
+    <th class="num" ${thStyle} onclick="sortTxTable('costBasis')">Cost Basis ${txArrow('costBasis')}</th>
+    <th class="num" ${thStyle} onclick="sortTxTable('currentVal')">Proceeds / Value ${txArrow('currentVal')}</th>
+    <th class="num" ${thStyle} onclick="sortTxTable('gain')">Gain / Loss ${txArrow('gain')}</th>
+    <th class="num" ${thStyle} onclick="sortTxTable('gainPct')">Return % ${txArrow('gainPct')}</th>
+    <th class="num" ${thStyle} onclick="sortTxTable('monthlyRet')" title="Total return divided by months held">Avg / Month ${txArrow('monthlyRet')}</th>
+  </tr>`;
+
+  if (!txns.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">No transactions match your filters</td></tr>`;
+    return;
+  }
+
+  const fmtPx = (price, currency) => {
+    if (currency === 'NIS') return '₪' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (currency === 'USD') return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return price.toFixed(2);
+  };
+
+  tbody.innerHTML = txns.map(t => {
+    const up   = t.gain >= 0;
+    const isSell = t.txType === 'SELL';
+    const exchClass = 'exch-' + (t.exchange || 'nasdaq').toLowerCase();
+    const dateStr = t.date.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    const badgeClass = isSell ? 'txn-sell' : 'txn-buy';
+    const valueLabel = isSell ? 'Realized' : '';
+    return `<tr${isSell ? ' style="background:rgba(245,101,101,.04)"' : ''}>
+      <td><span class="txn-date">${dateStr}</span></td>
+      <td>
+        <span class="txn-sym">${t.symbol}</span>
+        <span class="${badgeClass} txn-badge" style="margin-left:6px">${t.txType}</span>
+        <div class="asset-name">${t.name}</div>
+        <span class="exch ${exchClass}">${t.exchange}</span>
+      </td>
+      <td class="num">${t.qty.toLocaleString()}</td>
+      <td class="num txn-cost">${fmtPx(t.price, t.priceCurrency)}</td>
+      <td class="num">${fmt(t.costBasis)}</td>
+      <td class="num">${fmt(t.currentVal)}${isSell ? '<div style="color:var(--muted);font-size:10px">Realized</div>' : ''}</td>
+      <td class="num ${up ? 'up' : 'down'}">${up ? '+' : ''}${fmt(t.gain)}</td>
+      <td class="num ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(t.gainPct).toFixed(1)}%</td>
+      <td class="num ${t.monthlyRet >= 0 ? 'up' : 'down'}" style="font-size:11px;white-space:nowrap">
+        ${t.monthlyRet >= 0 ? '+' : ''}${t.monthlyRet.toFixed(2)}%<span style="color:var(--muted);font-weight:400">/mo</span>
+        <div style="color:var(--muted);font-size:10px">${Math.round(t.monthsHeld)}mo held</div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTable() {
+  if (tableView === 'transactions') { renderTransactions(); return; }
+  if (tableView === 'charts')       { setChartsSubView(chartsSubView); return; }
+  const rows = getFiltered();
+  const thead = document.getElementById('tableHead');
+  const tbody = document.getElementById('tableBody');
+  document.getElementById('rowCount').textContent = rows.length + ' asset' + (rows.length !== 1 ? 's' : '');
+
+  const isPerf = (tableView === 'performance');
+  const colCount = isPerf ? 6 : 7;
+
+  // Render thead
+  if (isPerf) {
+    thead.innerHTML = `<tr>
+      <th onclick="sortBy('symbol')">Asset</th>
+      <th class="num" onclick="sortBy('marketValue')">Market Value</th>
+      <th class="num" onclick="sortBy('gainAbs')">Gain / Loss</th>
+      <th class="num" onclick="sortBy('gainPct')">Return %</th>
+      <th class="num" onclick="sortBy('dailyChangePct')">Daily %</th>
+      <th class="num" onclick="sortBy('portfolioPct')">Portfolio %</th>
+    </tr>`;
+  } else {
+    thead.innerHTML = `<tr>
+      <th onclick="sortBy('symbol')">Asset</th>
+      <th onclick="sortBy('type')">Type</th>
+      <th onclick="sortBy('country')">Country</th>
+      <th class="num" onclick="sortBy('qty')">Qty</th>
+      <th class="num" onclick="sortBy('avgCost')">Avg Cost</th>
+      <th class="num" onclick="sortBy('currentPrice')">Price</th>
+      <th class="num" onclick="sortBy('marketValue')">Market Value</th>
+    </tr>`;
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="${colCount}">No assets match your filters</td></tr>`;
+    return;
+  }
+
+  const totalPortfolio = PORTFOLIO.map(computeRow).reduce((s, r) => s + r.marketValue, 0);
+
+  tbody.innerHTML = rows.map(r => {
+    const up = r.gainAbs >= 0;
+    const dayUp = r.dailyChangePct >= 0;
+    const flag = r.country === 'USA' ? '🇺🇸' : '🇮🇱';
+    const badgeClass = 'badge-' + r.type.toLowerCase();
+    const exchClass = 'exch-' + (r.exchange || 'nasdaq').toLowerCase();
+    const changeClass = up ? 'up' : 'down';
+    const arrow = up ? '▲' : '▼';
+    const dayClass = dayUp ? 'up' : 'down';
+    const dayArrow = dayUp ? '▲' : '▼';
+    const portfolioPct = (r.marketValue / totalPortfolio * 100).toFixed(1);
+    const isExpanded = expandedSymbols.has(r.symbol);
+    const hasHistory = !!(PURCHASE_HISTORY[r.symbol]);
+
+    const staleBadge = r._stale ? '<span class="stale-badge" title="Price not available from Yahoo Finance or TradingView — showing last known price">STALE</span>' : '';
+    const isIL = r.exchange === 'TASE';
+    const assetLabel = isIL ? r.name : r.symbol;
+    const assetCell = `<td>
+      ${hasHistory ? `<span class="expand-arrow">▶</span>` : `<span style="display:inline-block;width:14px"></span>`}
+      <span class="sym" style="display:inline">${assetLabel}</span>${staleBadge}
+    </td>`;
+
+    let cells;
+    if (isPerf) {
+      cells = assetCell + `
+      <td class="num num-value">${fmt(r.marketValue)}</td>
+      <td class="num"><span class="${changeClass}" style="font-weight:600">${up?'+':''}${fmt(r.gainAbs)}</span></td>
+      <td class="num"><span class="change-pill ${changeClass}">${arrow} ${Math.abs(r.gainPct).toFixed(1)}%</span></td>
+      <td class="num"><span class="change-pill ${dayClass}">${dayArrow} ${Math.abs(r.dailyChangePct).toFixed(2)}%</span></td>
+      <td class="num" style="color:var(--muted);font-size:12px">${portfolioPct}%</td>`;
+    } else {
+      cells = assetCell + `
+      <td><span class="badge ${badgeClass}">${r.type}</span></td>
+      <td><span class="flag" title="${r.country}">${flag}</span></td>
+      <td class="num num-value">${r.qty.toLocaleString()}</td>
+      <td class="num" style="color:var(--muted)">${fmtPrice(r.avgCost, r.avgCostCurrency)}</td>
+      <td class="num num-value">${fmtPrice(r.currentPrice, r.currentCurrency)}</td>
+      <td class="num num-value">${fmt(r.marketValue)}</td>`;
+    }
+
+    const rowHtml = `<tr class="asset-row${isExpanded ? ' expanded' : ''}" data-symbol="${r.symbol}">${cells}</tr>`;
+    return rowHtml + (isExpanded ? buildDetailRowHtml(r, colCount) : '');
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// Render summary cards
+// ─────────────────────────────────────────────
+function renderCards() {
+  const all = PORTFOLIO.map(computeRow);
+  const total = all.reduce((s, r) => s + r.marketValue, 0);
+  const cost  = all.reduce((s, r) => s + r.cost, 0);
+  const gain  = total - cost;
+  const gainPct = cost ? (gain / cost) * 100 : 0;
+
+  document.getElementById('c-total').textContent = fmt(total);
+  document.getElementById('c-total-sub').textContent = `in ${displayCurrency}`;
+
+  const gainEl = document.getElementById('c-gain');
+  gainEl.textContent = (gain >= 0 ? '+' : '') + fmt(gain);
+  gainEl.className = 'card-value ' + (gain >= 0 ? 'up' : 'down');
+  document.getElementById('c-gain-sub').textContent = (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1) + '% overall';
+
+  document.getElementById('c-cost').textContent = fmt(cost);
+  document.getElementById('c-cost-sub').textContent = 'total invested';
+
+  document.getElementById('c-assets').textContent = PORTFOLIO.length;
+  const exchanges = [...new Set(PORTFOLIO.map(r=>r.exchange))].join(' · ');
+  document.getElementById('c-assets-sub').textContent = exchanges;
+
+  // Today's change
+  const todayChangeUSD = all.reduce((s, r) => s + (r.marketValue * r.dailyChangePct / 100), 0);
+  const prevValue = total - todayChangeUSD;
+  const todayChangePct = prevValue !== 0 ? (todayChangeUSD / prevValue) * 100 : 0;
+  const todayUp = todayChangeUSD >= 0;
+  const todayEl = document.getElementById('c-today');
+  todayEl.textContent = (todayUp ? '+' : '') + fmt(todayChangeUSD);
+  todayEl.className = 'card-value ' + (todayUp ? 'up' : 'down');
+  document.getElementById('c-today-sub').textContent = (todayUp ? '+' : '') + todayChangePct.toFixed(2) + '% from yesterday';
+}
+
+// ─────────────────────────────────────────────
+// Render charts
+// ─────────────────────────────────────────────
+const SEGMENT_ORDER  = ['US Stocks', 'USA ETF', 'IL', 'Europe', 'Bitcoin'];
+const SEGMENT_COLORS = {
+  'US Stocks': '#5c7cfa',
+  'USA ETF':   '#3ecf8e',
+  'IL':        '#63b3ed',
+  'Europe':    '#b794f4',
+  'Bitcoin':   '#f7931a',
+};
+const SEGMENT_ICONS = {
+  'US Stocks': '🇺🇸',
+  'USA ETF':   '📈',
+  'IL':        '🇮🇱',
+  'Europe':    '🇪🇺',
+  'Bitcoin':   '₿',
+};
+
+// Tracks which country/sub-segment rows are expanded
+const expandedCountries = new Set();
+const expandedSubSegments = new Set();
+
+function renderCharts() {
+  const all = PORTFOLIO.map(computeRow);
+
+  // ── Country Split with multi-level drill-down ──
+  const CS_ORDER  = ['USA','IL','Europe','Bitcoin'];
+  const CS_COLORS = { 'USA':'#5c7cfa','IL':'#63b3ed','Europe':'#b794f4','Bitcoin':'#f7931a' };
+  const CS_ICONS  = { 'USA':'🇺🇸','IL':'🇮🇱','Europe':'🇪🇺','Bitcoin':'₿' };
+  const SUB_COLORS = { 'US Stocks':'#818cf8','USA ETF':'#34d399' };
+
+  // Build per-country totals
+  const csMap = {};
+  all.forEach(r => {
+    const key = (r.segment === 'US Stocks' || r.segment === 'USA ETF') ? 'USA' : r.segment;
+    csMap[key] = (csMap[key] || 0) + r.marketValue;
+  });
+
+  // Sub-totals for USA (US Stocks vs USA ETF)
+  const usaSubMap = {};
+  all.forEach(r => {
+    if (r.segment === 'US Stocks' || r.segment === 'USA ETF') {
+      usaSubMap[r.segment] = (usaSubMap[r.segment] || 0) + r.marketValue;
+    }
+  });
+
+  // Group holdings by segment for drill-down
+  const holdingsBySegment = {};
+  all.forEach(r => {
+    const seg = r.segment;
+    if (!holdingsBySegment[seg]) holdingsBySegment[seg] = [];
+    holdingsBySegment[seg].push(r);
+  });
+  // Sort each group by market value desc
+  Object.values(holdingsBySegment).forEach(arr => arr.sort((a,b) => b.marketValue - a.marketValue));
+
+  const csTotal = CS_ORDER.reduce((s, k) => s + (csMap[k] || 0), 0);
+  const fmt = v => v >= 1000 ? '₪' + (v/1000).toFixed(1) + 'K' : '₪' + v.toFixed(0);
+
+  // Helper: render a single holding row
+  function holdingRow(r, parentValue, cssClass) {
+    const holdPct = (r.marketValue / csTotal * 100).toFixed(1);
+    const barPct = (r.marketValue / parentValue * 100).toFixed(1);
+    const isIL = r.exchange === 'TASE';
+    const label = isIL ? r.name : r.symbol;
+    return `<div class="alloc-row ${cssClass}">
+      <div class="alloc-left">
+        <span style="display:inline-block;width:16px"></span>
+        <span style="font-size:10px;color:var(--text);opacity:.8">${label}</span>
+      </div>
+      <div class="alloc-bar-wrap">
+        <div class="alloc-bar" style="width:${barPct}%;background:var(--accent);opacity:.5"></div>
+      </div>
+      <span style="color:var(--muted);font-size:10px;min-width:40px;text-align:right">${holdPct}%</span>
+    </div>`;
+  }
+
+  const rows = CS_ORDER.filter(s => csMap[s]).map(s => {
+    const pct = (csMap[s] / csTotal * 100).toFixed(1);
+    const isExpanded = expandedCountries.has(s);
+    const hasUSASubs = s === 'USA';
+
+    let html = `<div class="alloc-row cs-parent" style="cursor:pointer" onclick="toggleCountry('${s}')">
+      <div class="alloc-left">
+        <span class="cs-expand-btn">${isExpanded ? '−' : '+'}</span>
+        <div class="alloc-dot" style="background:${CS_COLORS[s]}"></div>
+        <span>${CS_ICONS[s]} ${s}</span>
+      </div>
+      <div class="alloc-bar-wrap">
+        <div class="alloc-bar" style="width:${pct}%;background:${CS_COLORS[s]}"></div>
+      </div>
+      <span style="color:var(--muted);font-size:11px;min-width:40px;text-align:right">${pct}%</span>
+    </div>`;
+
+    if (isExpanded) {
+      if (hasUSASubs) {
+        // USA: show sub-segments (US Stocks, USA ETF) with their own expand
+        ['US Stocks','USA ETF'].filter(seg => usaSubMap[seg]).forEach(seg => {
+          const subPct = (usaSubMap[seg] / csTotal * 100).toFixed(1);
+          const barPct = (usaSubMap[seg] / csMap[s] * 100).toFixed(1);
+          const subExpanded = expandedSubSegments.has(seg);
+          html += `<div class="alloc-row cs-child" style="cursor:pointer" onclick="event.stopPropagation();toggleSubSegment('${seg}')">
+            <div class="alloc-left">
+              <span class="cs-expand-btn" style="font-size:12px">${subExpanded ? '−' : '+'}</span>
+              <div class="alloc-dot" style="background:${SUB_COLORS[seg]};width:7px;height:7px"></div>
+              <span style="font-size:11px;color:var(--muted)">${seg}</span>
+            </div>
+            <div class="alloc-bar-wrap">
+              <div class="alloc-bar" style="width:${barPct}%;background:${SUB_COLORS[seg]}"></div>
+            </div>
+            <span style="color:var(--muted);font-size:11px;min-width:40px;text-align:right">${subPct}%</span>
+          </div>`;
+          // Level 3: individual holdings under this sub-segment
+          if (subExpanded && holdingsBySegment[seg]) {
+            holdingsBySegment[seg].forEach(r => {
+              html += holdingRow(r, usaSubMap[seg], 'cs-holding');
+            });
+          }
+        });
+      } else {
+        // IL / Europe / Bitcoin: show holdings directly
+        const segKey = s; // segment key matches country key for non-USA
+        if (holdingsBySegment[segKey]) {
+          holdingsBySegment[segKey].forEach(r => {
+            html += holdingRow(r, csMap[s], 'cs-holding-direct');
+          });
+        }
+      }
+    }
+    return html;
+  });
+
+  document.getElementById('countryChart').innerHTML = rows.join('');
+  renderReturnChart();
+}
+
+function toggleCountry(country) {
+  if (expandedCountries.has(country)) expandedCountries.delete(country);
+  else expandedCountries.add(country);
+  renderCharts();
+}
+
+function toggleSubSegment(seg) {
+  if (expandedSubSegments.has(seg)) expandedSubSegments.delete(seg);
+  else expandedSubSegments.add(seg);
+  renderCharts();
+}
+
+// ─────────────────────────────────────────────
+// Historical price fetching (Yahoo Finance via CORS proxy)
+// ─────────────────────────────────────────────
+// Map internal symbols to Yahoo Finance tickers where they differ
+const YAHOO_TICKER = { 'BRKb': 'BRK-B' };
+
+async function fetchSymbolPrices(symbol, fromMs) {
+  const ticker = YAHOO_TICKER[symbol] || symbol;
+  const p1  = Math.floor(fromMs / 1000);
+  const p2  = Math.floor(Date.now() / 1000);
+  const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${p1}&period2=${p2}&includePrePost=false`;
+  const res  = await fetch('https://corsproxy.io/?' + encodeURIComponent(yUrl));
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  const r    = json.chart?.result?.[0];
+  if (!r?.timestamp?.length) throw new Error('no data');
+  const closes = r.indicators.adjclose?.[0]?.adjclose ?? r.indicators.quote?.[0]?.close ?? [];
+  let pts = r.timestamp
+    .map((ts, i) => ({ ms: ts * 1000, price: closes[i] }))
+    .filter(p => p.price != null);
+
+  // TASE (.TA) prices come in agorot (1 NIS = 100 agorot) — convert to NIS
+  if (symbol.endsWith('.TA')) pts = pts.map(p => ({ ms: p.ms, price: p.price / 100 }));
+
+  // Outlier filter: remove points > 5× away from their neighbours
+  if (pts.length >= 3) {
+    pts = pts.filter((p, i) => {
+      const prev = pts[i - 1]?.price;
+      const next = pts[i + 1]?.price;
+      const ref  = prev ?? next;
+      if (ref == null) return true;
+      return p.price >= ref / 5 && p.price <= ref * 5;
+    });
+  }
+  return pts;
+}
+
+async function loadHistoricalData() {
+  if (historicalLoading || historicalReady) return;
+  historicalLoading = true;
+
+  // Earliest purchase date across all lots
+  let earliestMs = Date.now();
+  Object.values(PURCHASE_HISTORY).flat().forEach(lot => {
+    const [d, m, y] = lot.date.split('/').map(Number);
+    const ms = new Date(y, m-1, d).getTime();
+    if (ms < earliestMs) earliestMs = ms;
+  });
+
+  const titleEl = document.querySelector('.return-panel-title');
+  titleEl.textContent = 'Portfolio Return Over Time  ·  Loading historical data…';
+
+  const results = await Promise.allSettled(
+    PORTFOLIO.map(r =>
+      fetchSymbolPrices(r.symbol, earliestMs)
+        .then(h => ({ symbol: r.symbol, history: h }))
+    )
+  );
+
+  results.forEach(res => {
+    if (res.status === 'fulfilled') {
+      historicalPrices[res.value.symbol] = res.value.history;
+    }
+  });
+
+  const loaded = Object.keys(historicalPrices).length;
+  const total  = PORTFOLIO.length;
+  titleEl.textContent = loaded === total
+    ? 'Portfolio Return Over Time  ·  Real prices'
+    : loaded > 0
+      ? `Portfolio Return Over Time  ·  Real prices (${loaded}/${total} symbols — ${total - loaded} unavailable from Yahoo Finance)`
+      : 'Portfolio Return Over Time  ·  Approximated (historical data unavailable)';
+
+  historicalLoading = false;
+  historicalReady   = true;
+  renderReturnChart();
+}
+
+// Price of a symbol closest to targetMs (but not more than ~6 weeks in the future)
+function priceAtDate(symbol, targetMs) {
+  const hist = historicalPrices[symbol];
+  if (!hist?.length) return null;
+  let best = null;
+  for (const pt of hist) {
+    if (pt.ms <= targetMs + 86400000 * 45) best = pt.price; // allow 45-day slack
+    else break;
+  }
+  return best;
+}
+
+// Real portfolio value at a given timestamp using historical prices.
+// For symbols without historical data, falls back to linear interpolation.
+function realPortfolioValueAt(targetMs) {
+  const nowMs = Date.now();
+  let total = 0;
+  PORTFOLIO.forEach(r => {
+    const lots = (PURCHASE_HISTORY[r.symbol] || []).filter(lot => {
+      const [d, m, y] = lot.date.split('/').map(Number);
+      return new Date(y, m-1, d).getTime() <= targetMs;
+    });
+    if (!lots.length) return;
+    const qty = lots.reduce((s, lot) => s + lot.qty, 0);
+    if (qty <= 0) return;
+
+    const histPrice = priceAtDate(r.symbol, targetMs);
+    if (histPrice != null) {
+      total += toDisplay(qty * histPrice, r.currentCurrency);
+    } else {
+      // Interpolate: blend each lot's purchase price → current price linearly over time
+      let lotValue = 0;
+      lots.forEach(lot => {
+        const [d, m, y] = lot.date.split('/').map(Number);
+        const buyMs = new Date(y, m-1, d).getTime();
+        const span  = nowMs - buyMs;
+        const t     = span > 0 ? Math.min(1, (targetMs - buyMs) / span) : 1;
+        const iPrice = lot.price + t * (r.currentPrice - lot.price);
+        lotValue += toDisplay(lot.qty * iPrice, lot.currency);
+      });
+      total += lotValue;
+    }
+  });
+  return total;
+}
+
+// Cumulative cost at a given timestamp
+function costAtDate(targetMs) {
+  let total = 0;
+  PORTFOLIO.forEach(r => {
+    (PURCHASE_HISTORY[r.symbol] || []).forEach(lot => {
+      const [d, m, y] = lot.date.split('/').map(Number);
+      if (new Date(y, m-1, d).getTime() <= targetMs) {
+        total += toDisplay(lot.qty * lot.price, lot.currency);
+      }
+    });
+  });
+  return total;
+}
+
+// Build monthly series using real historical prices
+function buildRealSeries() {
+  // Earliest purchase date
+  let earliest = new Date();
+  Object.values(PURCHASE_HISTORY).flat().forEach(lot => {
+    const [d, m, y] = lot.date.split('/').map(Number);
+    const date = new Date(y, m-1, d);
+    if (date < earliest) earliest = date;
+  });
+
+  // Generate month-end dates
+  const today  = new Date();
+  const months = [];
+  let cur = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+  while (cur <= today) {
+    const end = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+    months.push(end > today ? new Date(today) : end);
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+
+  const all = PORTFOLIO.map(computeRow);
+  const todayCost  = all.reduce((s, r) => s + r.cost, 0);
+  const todayValue = all.reduce((s, r) => s + r.marketValue, 0);
+
+  return months.map((date, i) => {
+    const ms    = date.getTime();
+    const isEnd = i === months.length - 1;
+    return {
+      date,
+      cumCost:  +(isEnd ? todayCost  : costAtDate(ms)).toFixed(2),
+      cumValue: +(isEnd ? todayValue : realPortfolioValueAt(ms)).toFixed(2),
+      isPurchase: false,
+    };
+  });
+}
+
+// ─────────────────────────────────────────────
+// Portfolio Return Over Time — main render
+// Uses real historical prices when loaded, falls back to interpolation.
+// ─────────────────────────────────────────────
+function renderReturnChart() {
+  const all = PORTFOLIO.map(computeRow);
+  const isLight = document.body.classList.contains('light');
+  const gridCol = isLight ? 'rgba(0,0,0,.06)' : 'rgba(255,255,255,.05)';
+  const tickCol = isLight ? '#6b769a' : '#7b82a8';
+  const now     = new Date();
+
+  // ── Kick off historical data load if not started ──
+  if (!historicalReady && !historicalLoading) loadHistoricalData();
+
+  // ── Build series ──
+  let series;
+  if (historicalReady) {
+    series = buildRealSeries();
+  } else {
+    // Fallback: linear interpolation while loading
+    const today   = new Date(); today.setHours(0,0,0,0);
+    const todayMs = today.getTime();
+    const rawLots = [];
+    PORTFOLIO.forEach(r => {
+      (PURCHASE_HISTORY[r.symbol] || []).forEach(lot => {
+        const [d, m, y] = lot.date.split('/').map(Number);
+        const lotCost     = toDisplay(lot.qty * lot.price,      lot.currency);
+        const lotTodayVal = toDisplay(lot.qty * r.currentPrice, r.currentCurrency);
+        rawLots.push({ date: new Date(y, m-1, d), cost: lotCost, todayValue: lotTodayVal,
+                       symbol: r.symbol, lotReturnPct: lotCost ? (lotTodayVal-lotCost)/lotCost*100 : 0 });
+      });
+    });
+    rawLots.sort((a, b) => a.date - b.date);
+    const interp = (lot, atDate) => {
+      const span = todayMs - lot.date.getTime();
+      if (span <= 0) return lot.cost;
+      const t = Math.min(1, Math.max(0, (atDate.getTime() - lot.date.getTime()) / span));
+      return lot.cost + (lot.todayValue - lot.cost) * t;
+    };
+    let cumCost = 0;
+    series = rawLots.map((lot, i) => {
+      cumCost += lot.cost;
+      let cumVal = 0;
+      for (let j = 0; j <= i; j++) cumVal += interp(rawLots[j], lot.date);
+      return { date: lot.date, cumCost: +cumCost.toFixed(2), cumValue: +cumVal.toFixed(2),
+               symbol: lot.symbol, returnPct: lot.lotReturnPct, isPurchase: true };
+    });
+    const todayCost  = all.reduce((s, r) => s + r.cost, 0);
+    const todayValue = all.reduce((s, r) => s + r.marketValue, 0);
+    series.push({ date: today, cumCost: +todayCost.toFixed(2), cumValue: +todayValue.toFixed(2), isPurchase: false });
+  }
+
+  // ── Period filter ──
+  let cutoff = null;
+  switch (returnChartPeriod) {
+    case '1W':  cutoff = new Date(now - 7*86400000);        break;
+    case '1M':  cutoff = new Date(now - 30*86400000);       break;
+    case 'YTD': cutoff = new Date(now.getFullYear(), 0, 1); break;
+    case '1Y':  cutoff = new Date(now - 365*86400000);      break;
+    case '3Y':  cutoff = new Date(now - 3*365*86400000);    break;
+  }
+  if (cutoff) {
+    const after  = series.filter(p => p.date >= cutoff);
+    const before = series.filter(p => p.date <  cutoff);
+    const base   = before.length ? before[before.length - 1] : { cumCost: 0, cumValue: 0 };
+    series = [{ date: cutoff, cumCost: base.cumCost, cumValue: base.cumValue, isPurchase: false }, ...after];
+  }
+
+  // ── KPIs — Modified Dietz return (eliminates impact of new cash flows) ──
+  // R = (EMV - BMV - CF) / (BMV + Σ(CF_i × W_i))
+  // W_i = fraction of period remaining when cash flow occurred
+  const todayRow   = all.reduce((a, r) => ({ cost: a.cost + r.cost, val: a.val + r.marketValue }), { cost: 0, val: 0 });
+  const todayCost  = todayRow.cost;
+  const todayValue = todayRow.val;
+  const isAll      = returnChartPeriod === 'All';
+  const costLbl    = document.getElementById('rs-cost-label');
+  const retLbl     = document.getElementById('rs-return-label');
+  const pctLbl     = document.getElementById('rs-pct-label');
+  document.getElementById('rs-value').textContent = fmt(todayValue);
+
+  const startVal  = isAll ? 0 : series[0].cumValue;
+  const startDate = isAll ? series[0].date : series[0].date;
+  const startMs   = startDate.getTime();
+  const endMs     = now.getTime();
+  const spanDays  = Math.max(1, (endMs - startMs) / 86400000);
+
+  // Sum cash flows (purchases) during the period, time-weighted
+  let totalCF = 0, weightedCF = 0;
+  Object.entries(PURCHASE_HISTORY).forEach(([sym, lots]) => {
+    lots.forEach(lot => {
+      const [d, m, y] = lot.date.split('/').map(Number);
+      const lotMs = new Date(y, m-1, d).getTime();
+      if (lotMs > startMs && lotMs <= endMs) {
+        const cf = toDisplay(lot.qty * lot.price, lot.currency);
+        const daysUsed = (lotMs - startMs) / 86400000;
+        const w = (spanDays - daysUsed) / spanDays; // fraction of period remaining
+        totalCF    += cf;
+        weightedCF += cf * w;
+      }
+    });
+  });
+
+  const denom  = startVal + weightedCF;
+  const mdGain = todayValue - startVal - totalCF;          // actual gain net of new money
+  const mdPct  = denom > 0 ? mdGain / denom * 100 : 0;    // Modified Dietz %
+
+  // TWR — only available once historical prices are loaded
+  const twrRaw = (returnMethod === 'twr') ? computeTWR(startMs, endMs) : null;
+  const showPct = (returnMethod === 'twr' && twrRaw != null) ? twrRaw * 100 : mdPct;
+  const methodSuffix = returnMethod === 'twr' ? (twrRaw != null ? ' TWR' : ' Dietz*') : ' Dietz';
+
+  if (isAll) {
+    if (costLbl) costLbl.textContent = 'Cost Invested';
+    document.getElementById('rs-cost').textContent = fmt(todayCost);
+  } else {
+    if (costLbl) costLbl.textContent = 'Start Value';
+    document.getElementById('rs-cost').textContent = fmt(startVal);
+  }
+  if (retLbl) retLbl.textContent = isAll ? 'Total Return' : 'Period Return';
+  const retEl = document.getElementById('rs-return');
+  retEl.textContent = (mdGain >= 0 ? '+' : '') + fmt(mdGain);
+  retEl.className   = 'return-stat-value ' + (mdGain >= 0 ? 'up' : 'down');
+  if (pctLbl) pctLbl.textContent = (isAll ? 'Return %' : 'Period %') + methodSuffix;
+  const pctEl = document.getElementById('rs-pct');
+  pctEl.textContent = (showPct >= 0 ? '+' : '') + showPct.toFixed(1) + '%';
+  pctEl.className   = 'return-stat-value ' + (showPct >= 0 ? 'up' : 'down');
+
+  // ── Chart ──
+  const labels    = series.map(p => {
+    if (Math.abs(p.date - now) < 86400000 * 2) return 'Today';
+    return p.date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  });
+  const costData  = series.map(p => p.cumCost);
+  const valueData = series.map(p => p.cumValue);
+  const ptRadii   = series.map(p => (p.isPurchase && !historicalReady) ? 5 : 2);
+  const ptColors  = series.map(p => (p.isPurchase && !historicalReady) ? '#f7931a' : 'rgba(246,173,85,0)');
+  const ptBorder  = ptColors;
+
+  if (returnChart) returnChart.destroy();
+  returnChart = new Chart(document.getElementById('returnChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Portfolio Value', data: valueData,
+          borderColor: '#5c7cfa', backgroundColor: 'rgba(92,124,250,.10)',
+          fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 },
+        { label: 'Cost Invested', data: costData,
+          borderColor: '#f6ad55', backgroundColor: 'rgba(246,173,85,.06)',
+          fill: true, tension: 0.3, borderDash: [5, 3],
+          pointRadius: ptRadii, pointBackgroundColor: ptColors,
+          pointBorderColor: ptBorder, pointHoverRadius: 7 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, labels: { color: tickCol, font: { size: 11 }, boxWidth: 14 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (!historicalReady && ctx.dataset.label === 'Cost Invested') {
+                const p = series[ctx.dataIndex];
+                if (p?.isPurchase) {
+                  const sign = p.returnPct >= 0 ? '+' : '';
+                  return ` 📌 ${p.symbol}  ·  ${sign}${p.returnPct.toFixed(0)}%  ·  ${fmt(p.cumCost)}`;
+                }
+              }
+              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: gridCol }, ticks: { color: tickCol, maxTicksLimit: 8, font: { size: 10 } } },
+        y: { grid: { color: gridCol }, ticks: { color: tickCol, callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// Top holdings
+// ─────────────────────────────────────────────
+function renderTopHoldings() {
+  const all = PORTFOLIO.map(computeRow).sort((a,b) => b.marketValue - a.marketValue).slice(0, 5);
+  const total = PORTFOLIO.map(computeRow).reduce((s,r) => s + r.marketValue, 0);
+
+  document.getElementById('topHoldings').innerHTML = all.map((r, i) => {
+    const pct = (r.marketValue / total * 100).toFixed(1);
+    const col = COLORS[i % COLORS.length];
+    return `<div class="alloc-row">
+      <div class="alloc-left">
+        <div class="alloc-dot" style="background:${col}"></div>
+        <span>${r.symbol}</span>
+      </div>
+      <div class="alloc-bar-wrap">
+        <div class="alloc-bar" style="width:${pct}%;background:${col}"></div>
+      </div>
+      <span style="color:var(--muted);font-size:11px;min-width:34px;text-align:right">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// Market Indexes
+// ─────────────────────────────────────────────
+const MARKET_INDEXES = [
+  { ticker: '^GSPC',    name: 'S&P 500',    currency: 'USD' },
+  { ticker: '^IXIC',    name: 'Nasdaq',     currency: 'USD' },
+  { ticker: '^GDAXI',   name: 'DAX',        currency: 'EUR' },
+  { ticker: '^STOXX50E',name: 'STOXX 50',   currency: 'EUR' },
+  { ticker: '^TA125.TA',name: 'TA-125',     currency: 'ILS' },
+  { ticker: 'BTC-USD',  name: 'Bitcoin',    currency: 'USD' },
+];
+
+async function fetchIndexQuote(ticker) {
+  const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
+  const res  = await fetch('https://corsproxy.io/?' + encodeURIComponent(yUrl));
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  const r = json.chart?.result?.[0];
+  if (!r) throw new Error('no result');
+  const closes = r.indicators.quote?.[0]?.close ?? [];
+  const prev = closes[closes.length - 2];
+  const last = closes[closes.length - 1];
+  if (last == null) throw new Error('no close');
+  const chgPct = prev != null ? ((last - prev) / prev) * 100 : null;
+  return { price: last, chgPct };
+}
+
+function fmtIdx(val, currency) {
+  if (currency === 'ILS') return '₪' + val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (currency === 'EUR') return '€' + val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (val >= 1000)        return '$' + val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ─────────────────────────────────────────────
+// Clear filters
+// ─────────────────────────────────────────────
+function filtersActive() {
+  return !activeFilters.country.has('All') || !activeFilters.type.has('All') || !activeFilters.exchange.has('All');
+}
+function updateClearBtn() {
+  const btn = document.getElementById('clearFiltersBtn');
+  if (btn) btn.style.display = filtersActive() ? 'inline-flex' : 'none';
+}
+function clearFilters() {
+  activeFilters.country  = new Set(['All']);
+  activeFilters.type     = new Set(['All']);
+  activeFilters.exchange = new Set(['All']);
+  document.querySelectorAll('.pill').forEach(b => b.classList.toggle('active', b.dataset.val === 'All'));
+  updateClearBtn();
+  renderTable();
+}
+
+// ─────────────────────────────────────────────
+// Portfolio Insights (data-driven observations)
+// ─────────────────────────────────────────────
+function generateInsights() {
+  const el = document.getElementById('portfolioInsights');
+  if (!el) return;
+
+  const rows     = PORTFOLIO.map(computeRow);
+  const total    = rows.reduce((s, r) => s + r.marketValue, 0);
+  if (total <= 0) return;
+  const wt = r => r.marketValue / total * 100;
+
+  const pool = [];
+
+  // ── 0. GAP ANALYSIS INSIGHTS (high-priority — shown first when gap data is available) ──
+  if (gapAnalysisData && gapAnalysisData.total > 0) {
+    const { total: gTotal, buckets: gBuckets, cashNIS: gCash } = gapAnalysisData;
+    const gPct = v => v / gTotal * 100;
+    const fmtNIS2 = v => {
+      if (Math.abs(v) >= 1e6) return '₪' + (v/1e6).toFixed(2) + 'M';
+      if (Math.abs(v) >= 1e3) return '₪' + (v/1000).toFixed(2) + 'K';
+      return '₪' + Math.round(v);
+    };
+    const allG = { ...gBuckets, cash: gCash };
+    Object.entries(TARGET_ALLOCATION).forEach(([key, tgt]) => {
+      const cur = allG[key] || 0;
+      const curPct = gPct(cur);
+      const gapPct = curPct - tgt;
+      const gapAbs = Math.abs(cur - gTotal * tgt / 100);
+      if (Math.abs(gapPct) < 1.5) return; // within ±1.5% → no action needed
+
+      if (key === 'usa' && gapPct < 0) {
+        pool.push({ icon:'🇺🇸', type:'info', _gap:true,
+          title: `USA ETFs underweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Deploy ~${fmtNIS2(gapAbs)} more into US index ETFs (VOO, QQQM, or IL-listed equivalents like INFF1.TA / iSFF501.TA) to reach your 35% target. Your US ETF sleeve is the portfolio's engine — build it systematically.` });
+      } else if (key === 'usa' && gapPct > 0) {
+        pool.push({ icon:'🇺🇸', type:'warning', _gap:true,
+          title: `USA ETFs overweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `You're ~${fmtNIS2(gapAbs)} above your 35% US ETF target. Trim into strength and rotate the excess into your most underweight categories.` });
+      } else if (key === 'europe' && gapPct < 0) {
+        pool.push({ icon:'🇪🇺', type:'info', _gap:true,
+          title: `Europe underweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Add ~${fmtNIS2(gapAbs)} in European ETFs (TCHF12.TA / iSFF301.TA). Germany's fiscal expansion (defense + infrastructure) is a multi-year tailwind. Your DAX ETF is already your strongest performer — keep the thesis running.` });
+      } else if (key === 'europe' && gapPct > 0) {
+        pool.push({ icon:'🇪🇺', type:'info', _gap:true,
+          title: `Europe overweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Your European allocation is ~${fmtNIS2(gapAbs)} above the 18% target. If the thesis is intact (DAX fiscal tailwind), intentional overweight is fine — but document the conviction. Otherwise trim and rotate to US ETFs.` });
+      } else if (key === 'israel' && gapPct > 0) {
+        pool.push({ icon:'🇮🇱', type:'warning', _gap:true,
+          title: `Israel overweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `You're carrying ${fmtNIS2(gapAbs)} excess in Israeli market exposure vs your 20% target. Trim on TASE strength days — rotate into global ETFs to reduce home-country concentration risk.` });
+      } else if (key === 'israel' && gapPct < 0) {
+        pool.push({ icon:'🇮🇱', type:'info', _gap:true,
+          title: `Israel underweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Room to add ~${fmtNIS2(gapAbs)} to reach your 20% Israel target. KSMF74.TA (TA-125) is the most efficient vehicle. Add on geopolitically quiet days.` });
+      } else if (key === 'bitcoin' && gapPct < 0) {
+        pool.push({ icon:'₿', type:'info', _gap:true,
+          title: `Bitcoin underweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Add ~${fmtNIS2(gapAbs)} to hit your 3% BTC target. For a high-risk profile, accumulate on pullbacks below the 20-day MA. IBIT is the cleanest vehicle; direct BTC if you prefer self-custody.` });
+      } else if (key === 'bitcoin' && gapPct > 0) {
+        pool.push({ icon:'₿', type:'warning', _gap:true,
+          title: `Bitcoin overweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `BTC is ~${fmtNIS2(gapAbs)} above target. After strong crypto rallies, trim the excess back to 3% and redeploy into your underweight equity buckets.` });
+      } else if (key === 'stocks' && gapPct < 0) {
+        pool.push({ icon:'📈', type:'info', _gap:true,
+          title: `Individual stocks underweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Deploy ~${fmtNIS2(gapAbs)} into high-conviction names. Your track record (NVDA, NET, MA) shows real stock-picking edge. Focus on names where you have a differentiated view — not just more index exposure.` });
+      } else if (key === 'stocks' && gapPct > 0) {
+        pool.push({ icon:'📈', type:'warning', _gap:true,
+          title: `Individual stocks overweight: ${curPct.toFixed(0)}% vs ${tgt}% target`,
+          body: `Your single-stock sleeve is ${fmtNIS2(gapAbs)} above the 18% target. Review position concentration — zombie positions (SEDG, TWLO, GLBE) are pulling down returns. Cut losers, consolidate into winners.` });
+      } else if (key === 'cash' && gapPct > 0) {
+        pool.push({ icon:'💵', type:'warning', _gap:true,
+          title: `Cash drag: ${curPct.toFixed(0)}% vs ${tgt}% target — deploy it`,
+          body: `You're holding ${fmtNIS2(gapAbs)} more cash than your 6% target. Cash earns below inflation. Identify your single biggest allocation gap above and deploy systematically — dollar-cost averaging over 3-4 weeks reduces timing risk.` });
+      }
+    });
+  }
+
+  // ── 1. ZOMBIE POSITIONS — small + deeply negative → cut & redeploy ──
+  const zombies = [...rows].filter(r => r.gainPct < -25 && wt(r) < 2.5);
+  if (zombies.length) {
+    const names    = zombies.map(r => `${r.symbol} (${r.gainPct.toFixed(0)}%)`).join(', ');
+    const combined = fmt(zombies.reduce((s, r) => s + r.gainAbs, 0));
+    pool.push({ icon:'✂️', type:'warning',
+      title: `Cut your losers: ${zombies.slice(0,3).map(r=>r.symbol).join(', ')}`,
+      body: `${names} — these are sub-2% positions with severe losses (${combined} combined drag). The recovery math from -50%+ requires a 100%+ gain just to break even. At this size, tax-loss harvesting and redeploying into your winners is the disciplined move.` });
+  }
+
+  // ── 2. NVDA — reassess sizing ──
+  const nvda = rows.find(r => r.symbol === 'NVDA');
+  if (nvda && nvda.gainPct > 500) {
+    const nvdaWt = wt(nvda).toFixed(1);
+    pool.push({ icon:'🎯', type: +nvdaWt < 8 ? 'info' : 'warning',
+      title: `NVDA +${nvda.gainPct.toFixed(0)}% — still only ${nvdaWt}% of portfolio`,
+      body: +nvdaWt < 8
+        ? `Your single best performer is arguably underweight given AI capex spend is accelerating. Hyperscalers (MSFT, AMZN, GOOGL) are all in your book — NVDA is the picks-and-shovels play. With your risk profile, 8-10% sizing is defensible.`
+        : `NVDA at ${nvdaWt}% is a concentrated single-stock bet. A 10-15% trim into strength locks in real gains and reduces idiosyncratic risk without killing the position.` });
+  }
+
+  // ── 3. ACN — quality dip ──
+  const acn = rows.find(r => r.symbol === 'ACN');
+  if (acn && acn.gainPct < -5) {
+    pool.push({ icon:'⬇️', type:'info',
+      title: `ACN −${Math.abs(acn.gainPct).toFixed(0)}% — quality name at a discount`,
+      body: `Accenture is the largest AI implementation partner on the planet — down on fear that AI replaces consulting. That thesis is backwards: AI complexity drives MORE consulting demand. Trades below its 5Y avg P/E. Average down.` });
+  }
+
+  // ── 4. ETF OVERLAP — consolidate passive exposure ──
+  const usEtfs = rows.filter(r => r.segment === 'USA ETF');
+  if (usEtfs.length >= 3) {
+    const etfWt   = usEtfs.reduce((s, r) => s + wt(r), 0).toFixed(0);
+    const symbols = usEtfs.map(r => r.symbol).join(', ');
+    pool.push({ icon:'🔁', type:'info',
+      title: `${usEtfs.length} overlapping US ETFs = ${etfWt}% of portfolio`,
+      body: `${symbols} all track similar US indices. You're holding near-identical exposure across multiple wrappers. Consolidate to 1 US ETF and redeploy the rest into individual high-conviction positions — that's where your edge is.` });
+  }
+
+  // ── 5. BTC UNDERWEIGHT for high-risk investor ──
+  const btcRow = rows.find(r => r.segment === 'Bitcoin');
+  if (btcRow && wt(btcRow) < 5) {
+    pool.push({ icon:'₿', type:'info',
+      title: `Bitcoin is only ${wt(btcRow).toFixed(1)}% — underweight for your risk profile`,
+      body: `Standard high-risk allocation is 5-10% crypto. At ${wt(btcRow).toFixed(1)}%, you have token exposure but miss meaningful upside in a BTC bull cycle. Consider building to 5% on dips. ETH as a 1-2% satellite adds diversification within crypto.` });
+  }
+
+  // ── 6. ISRAEL CONCENTRATION — home bias risk ──
+  const ilWt = rows.filter(r => r.segment === 'IL').reduce((s, r) => s + wt(r), 0);
+  if (ilWt > 15) {
+    pool.push({ icon:'🇮🇱', type:'info',
+      title: `Israel = ${ilWt.toFixed(0)}% — significant home-country bias`,
+      body: `KSMF74.TA (TA-125 tracker) is your largest single position at ${wt(rows.find(r=>r.symbol==='KSMF74.TA')||{marketValue:0}).toFixed(1)}%. TA-125 is heavily weighted to banks and defense — not a pure tech play. Geopolitical risk is non-trivial. Trim to 8-10% and rotate into global ETFs.` });
+  }
+
+  // ── 7. EUROPE is working ──
+  const euroWt = rows.filter(r => r.segment === 'Europe').reduce((s, r) => s + wt(r), 0);
+  const dax    = rows.find(r => r.symbol === 'TCHF12.TA');
+  if (dax && dax.gainPct > 100 && euroWt > 10) {
+    pool.push({ icon:'🇪🇺', type:'positive',
+      title: `Europe thesis is working — hold and let it run`,
+      body: `Your DAX ETF (TCHF12.TA) is +${dax.gainPct.toFixed(0)}% — a strong contrarian call that's paid off. German fiscal stimulus (defense + infrastructure) is a multi-year tailwind. Don't overtrade your winners. Europe at ${euroWt.toFixed(0)}% is a reasonable conviction allocation.` });
+  }
+
+  // ── 8. BRK.B — your volatility buffer ──
+  const brk = rows.find(r => r.symbol === 'BRKb');
+  if (brk && brk.gainPct > 30) {
+    pool.push({ icon:'🏦', type:'positive',
+      title: `BRK.B +${brk.gainPct.toFixed(0)}% — Buffett is your hedge`,
+      body: `Berkshire is outperforming in the current macro — $350B+ cash pile means Buffett can deploy aggressively in a downturn. In volatile markets, BRK.B historically outperforms the index. No action needed — this is working as designed.` });
+  }
+
+  // ── 9. MARKET CONTEXT — live index signals ──
+  const snp = marketIndexData.find(d => d.name === 'S&P 500');
+  const nq  = marketIndexData.find(d => d.name === 'Nasdaq');
+  const ta  = marketIndexData.find(d => d.name === 'TA-125');
+  const btc = marketIndexData.find(d => d.name === 'Bitcoin');
+
+  if (snp && nq && snp.chgPct < -1 && nq.chgPct < -1) {
+    const bigUS = [...rows].filter(r => r.segment === 'US Stocks').sort((a,b)=>b.marketValue-a.marketValue).slice(0,3).map(r=>r.symbol).join(', ');
+    pool.push({ icon:'📉', type:'info',
+      title: `US down S&P ${snp.chgPct.toFixed(1)}% / Nasdaq ${nq.chgPct.toFixed(1)}% — review add list`,
+      body: `Broad selloffs without earnings catalysts are buying opportunities. Your high-conviction US names (${bigUS}) are cheaper today than yesterday. With your risk tolerance, this is not the day to panic-sell — it's the day to review your add list.` });
+  }
+  if (snp && snp.chgPct > 1) {
+    pool.push({ icon:'📈', type:'positive',
+      title: `Risk-on day: S&P +${snp.chgPct.toFixed(1)}% / Nasdaq ${nq ? '+' + nq.chgPct.toFixed(1) : ''}%`,
+      body: `Your 60%+ US exposure benefits directly. Rally days are when to review whether any positions have become overweight and worth trimming into strength.` });
+  }
+  if (btc && Math.abs(btc.chgPct) > 2) {
+    const btcVal = rows.find(r => r.segment === 'Bitcoin')?.marketValue || 0;
+    pool.push({ icon:'₿', type: btc.chgPct > 0 ? 'positive' : 'warning',
+      title: `Bitcoin ${btc.chgPct > 0 ? '+' : ''}${btc.chgPct.toFixed(1)}% today`,
+      body: btc.chgPct > 0
+        ? `Crypto risk-on. Your BTC position gained ${fmt(btcVal * btc.chgPct / 100)} today. If you've been considering adding, a breakout day isn't the entry — wait for a pullback.`
+        : `BTC is selling off. If you've been underweight (you are at ${wt(btcRow||{marketValue:0}).toFixed(1)}%), a 2-5% dip is typically a better entry than a calm day.` });
+  }
+  if (ta && ta.chgPct < -0.8) {
+    pool.push({ icon:'🇮🇱', type:'warning',
+      title: `TA-125 −${Math.abs(ta.chgPct).toFixed(2)}% — review your Israel concentration`,
+      body: `TA-125 weakness directly hits your largest position (KSMF74.TA, 13.3%). Given geopolitical tail risk, this is a reminder to ask whether 13%+ passive Israeli market exposure is your highest-conviction bet or just legacy sizing.` });
+  }
+
+  // ── 10. OVERALL PERFORMANCE ──
+  const totalGain = rows.reduce((s, r) => s + r.gainAbs, 0);
+  const totalCost = rows.reduce((s, r) => s + r.cost, 0);
+  const overallPct = totalCost > 0 ? totalGain / totalCost * 100 : 0;
+  if (overallPct > 30) {
+    pool.push({ icon:'💰', type:'positive',
+      title: `Portfolio +${overallPct.toFixed(0)}% overall — protect the gains`,
+      body: `Strong total return. At this stage, ask yourself: what's the max drawdown you can stomach? With ${fmt(totalGain)} of unrealized gains, a 20% market correction would erase ${fmt(totalGain * 0.2)}. Make sure your position sizing reflects your pain tolerance, not just your upside appetite.` });
+  }
+
+  // Ensure at least 3 items
+  if (pool.length < 3) pool.push({ icon:'📊', type:'info',
+    title: `Portfolio at a glance: US ${rows.filter(r=>r.segment==='US Stocks'||r.segment==='USA ETF').reduce((s,r)=>s+wt(r),0).toFixed(0)}% · IL ${rows.filter(r=>r.segment==='IL').reduce((s,r)=>s+wt(r),0).toFixed(0)}% · EU ${rows.filter(r=>r.segment==='Europe').reduce((s,r)=>s+wt(r),0).toFixed(0)}% · BTC ${wt(rows.find(r=>r.segment==='Bitcoin')||{marketValue:0}).toFixed(0)}%`,
+    body: `Main risk factors: home-country bias (Israel), ETF overlap in US sleeve, and sub-scale positions dragging returns without meaningful upside.` });
+
+  // When gap data is available: always show gap insights first (they're personalized + time-sensitive)
+  // then fill with regular insights up to 5 total. Without gap data: rotate 4 regular insights daily.
+  let shown;
+  if (gapAnalysisData && gapAnalysisData.total > 0) {
+    const gapItems     = pool.filter(p => p._gap);
+    const regularItems = pool.filter(p => !p._gap);
+    // Sort gaps by abs magnitude (largest gap shown first) — already in insertion order by analyzeGaps
+    const maxGapShown  = Math.min(3, gapItems.length);
+    const maxRegShown  = Math.min(5 - maxGapShown, regularItems.length);
+    // Rotate regular items daily
+    const day2  = Math.floor(Date.now() / 86400000);
+    const start2 = regularItems.length > 0 ? day2 % regularItems.length : 0;
+    const regShown = [];
+    for (let i = 0; i < maxRegShown; i++) regShown.push(regularItems[(start2 + i) % regularItems.length]);
+    shown = [...gapItems.slice(0, maxGapShown), ...regShown];
+  } else {
+    // No gap data — rotate 4 regular insights per day
+    const day   = Math.floor(Date.now() / 86400000);
+    const start = pool.length > 0 ? day % pool.length : 0;
+    shown = [];
+    for (let i = 0; i < Math.min(4, pool.length); i++) shown.push(pool[(start + i) % pool.length]);
+  }
+
+  el.innerHTML = shown.map(ins => `
+    <div class="insight-card insight-${ins.type}">
+      <span class="insight-icon">${ins.icon}</span>
+      <div class="insight-body">
+        <div class="insight-title">${ins.title}</div>
+        <div class="insight-desc">${ins.body}</div>
+      </div>
+    </div>`).join('') + `<div class="insight-footer">AI-generated · High-risk profile · Not professional financial advice</div>`;
+}
+
+// ─────────────────────────────────────────────
+// Watchlist Opportunities (external recommendations)
+// ─────────────────────────────────────────────
+
+const WATCHLIST_CANDIDATES = [
+  { symbol:'META',  icon:'📘', name:'Meta Platforms',
+    thesis:'AI monetisation accelerating: Llama 4 driving ad efficiency +30% YoY. Reels now 50% of IG time-spent. Trades at 22x forward P/E vs FAANG average 28x.',
+    fit:'High-growth US tech — fits your 18% stocks sleeve. Analyst consensus: Strong Buy (42/48).',
+    tags:['US Stocks','AI','Growth'] },
+  { symbol:'PLTR',  icon:'🛡️', name:'Palantir Technologies',
+    thesis:'AIP (AI Platform) turning DoD + enterprise AI-ops into recurring ARR. US commercial revenue +54% YoY. First profitable year in 2023, expanding margins.',
+    fit:'High-conviction AI infra play — complements NVDA/NET in your tech cluster. Small position (1-2%) appropriate given valuation premium.',
+    tags:['US Stocks','AI','Defence'] },
+  { symbol:'ADBE',  icon:'🎨', name:'Adobe',
+    thesis:'Firefly AI natively embedded in Creative Cloud — 12B+ images generated. Market overreacted to Figma deal collapse. Now back to fair value at 24x FCF.',
+    fit:'Profitable creative-tech leader. Fits your quality-growth style (similar to MA, ACN). Analyst target: $640 (+25% upside).',
+    tags:['US Stocks','SaaS','AI'] },
+  { symbol:'AVGO',  icon:'💾', name:'Broadcom',
+    thesis:'Custom AI ASIC business (XPUs for Google + Meta) growing 220% YoY. VMware integration on track — $8.5B annual synergies by FY26. Dividends growing 14% annually.',
+    fit:'Semiconductor + infrastructure — diversifies NVDA concentration with lower volatility. Natural hedge within AI theme.',
+    tags:['US Stocks','Semiconductors','Dividend'] },
+  { symbol:'HIMS',  icon:'💊', name:'Hims & Hers Health',
+    thesis:'GLP-1/semaglutide compounding platform growing 110% YoY revenue. FDA compounding window creates 12-18mo defensible moat. Profitable since Q4 2024.',
+    fit:'Small-cap disruptor — high risk/reward. 1% position adds optionality without meaningful portfolio risk. Not covered by most retail investors.',
+    tags:['US Stocks','Healthcare','Small-Cap'] },
+  { symbol:'BLK',   icon:'🏛️', name:'BlackRock',
+    thesis:'$10T AUM + GIP acquisition adds $150B infrastructure. ETF fee stream is recession-proof. Dividend yield 2.3%, growing 15% annually. Buffett-quality compounder.',
+    fit:'Defensive quality compounder — pairs with your BRK.B "anchor" position. Different from everything else you hold.',
+    tags:['US Stocks','Finance','Dividend'] },
+  { symbol:'RBLX',  icon:'🎮', name:'Roblox',
+    thesis:'48M DAU. Monetization per user growing +23%. UGC economy ($1B+ paid to creators in 2024). Adolescent gaming → young adult retention improving.',
+    fit:'Speculative growth — high beta. Fits only if you want consumer-internet exposure. Recommend <1% sizing.',
+    tags:['US Stocks','Gaming','High-Risk'] },
+  { symbol:'ASTS',  icon:'📡', name:'AST SpaceMobile',
+    thesis:'Direct-to-cell satellite broadband. BlueBird constellation launching 2025. AT&T + Verizon committed MVNO agreements = de-risked demand. Enormous TAM.',
+    fit:'Deep high-risk, high-reward. Sub-1% sizing only — binary outcome stock, but asymmetric upside if sats deploy on schedule.',
+    tags:['US Stocks','Space','High-Risk'] },
+  { symbol:'RHM',   icon:'🪖', name:'Rheinmetall (DE:RHM)',
+    thesis:"Europe's defense champion — NATO rearmament tailwind for 5-10 years. Revenue €10B → projected €22B by 2027. Order backlog record €52B. P/E 30x but growth justifies it.",
+    fit:"Complements your DAX ETF with direct defense exposure. Europe thesis amplifier. Available via Frankfurt or via TASE-listed Europe ETF top holding.",
+    tags:['Europe','Defence','Growth'] },
+  { symbol:'ETH',   icon:'⬡', name:'Ethereum (via ETH ETF)',
+    thesis:'Staking yield 3.5-5% APY + scarcity (deflationary post-merge). ETH ETF with staking approval pending SEC in 2025. Institutional DeFi onramp.',
+    fit:"1-2% ETH satellite alongside your BTC position creates a more complete crypto sleeve. Lower correlation to equities than most think.",
+    tags:['Bitcoin','Crypto','Alternative'] },
+];
+
+function generateWatchlist() {
+  const el = document.getElementById('watchlistInsights');
+  if (!el) return;
+
+  // Exclude symbols already in portfolio
+  const held = new Set(PORTFOLIO.map(r => r.symbol));
+  const candidates = WATCHLIST_CANDIDATES.filter(c => !held.has(c.symbol));
+
+  // Rotate 3-5 per day (daily rotation keeps it feeling fresh)
+  const day   = Math.floor(Date.now() / 86400000);
+  const start = candidates.length > 0 ? day % candidates.length : 0;
+  const shown = [];
+  for (let i = 0; i < Math.min(4, candidates.length); i++) {
+    shown.push(candidates[(start + i) % candidates.length]);
+  }
+
+  el.innerHTML = shown.map(c => `
+    <div class="insight-card insight-info" style="margin-bottom:10px">
+      <span class="insight-icon">${c.icon}</span>
+      <div class="insight-body">
+        <div class="insight-title" style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:monospace;background:var(--surface2);padding:1px 6px;border-radius:4px;font-size:11px;color:var(--accent)">${c.symbol}</span>
+          ${c.name}
+        </div>
+        <div class="insight-desc" style="margin-top:4px">${c.thesis}</div>
+        <div style="margin-top:4px;font-size:10px;color:var(--gold);font-weight:600">${c.fit}</div>
+        <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">
+          ${c.tags.map(t => `<span style="font-size:9px;padding:1px 6px;border-radius:10px;background:var(--surface2);color:var(--muted)">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('') +
+    `<div class="insight-footer">Rotates daily · Research-based · Not financial advice</div>`;
+}
+
+// ─────────────────────────────────────────────
+// Sunburst Chart
+// ─────────────────────────────────────────────
+let _sbFocused = null;
+
+function renderSunburst() {
+  const container = document.getElementById('sunburstView');
+  if (!container) return;
+
+  // Ensure table is hidden, sunburst shown
+  const tableEl = document.querySelector('.table-wrap table');
+  const rcEl    = document.getElementById('rowCount');
+  if (tableEl) tableEl.style.display = 'none';
+  if (rcEl)    rcEl.style.display    = 'none';
+
+  const rows       = PORTFOLIO.map(computeRow);
+  const totalValue = rows.reduce((s, r) => s + r.marketValue, 0);
+  if (totalValue <= 0) { container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">No data</p>'; return; }
+
+  // Category definitions — order controls clock position
+  const CAT = {
+    'USA ETF':   { label:'USA ETF',  rgb:[92,124,250]  },
+    'US Stocks': { label:'Stocks',   rgb:[62,207,142]  },
+    'Europe':    { label:'Europe',   rgb:[183,148,244] },
+    'IL':        { label:'Israel',   rgb:[246,173,85]  },
+    'Bitcoin':   { label:'Bitcoin',  rgb:[245,101,101] },
+  };
+
+  // Group by segment
+  const grouped = {};
+  rows.forEach(r => { (grouped[r.segment] = grouped[r.segment] || []).push(r); });
+
+  const categories = Object.entries(CAT)
+    .filter(([seg]) => grouped[seg]?.length)
+    .map(([seg, cfg]) => {
+      const items = grouped[seg].sort((a, b) => b.marketValue - a.marketValue);
+      const total = items.reduce((s, r) => s + r.marketValue, 0);
+      return { ...cfg, seg, total, items };
+    })
+    .filter(c => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  // Dimensions
+  const SIZE = 680, cx = SIZE / 2, cy = SIZE / 2;
+  const R0 = 108, R1 = 245, R2 = 348;
+  const IGAP = 0.013, OGAP = 0.005;   // radians gap between segments
+
+  // Color helpers
+  const toRGB  = ([r,g,b]) => `rgb(${r},${g},${b})`;
+  const shade  = ([r,g,b], t) => `rgb(${Math.round(r+(255-r)*t)},${Math.round(g+(255-g)*t)},${Math.round(b+(255-b)*t)})`;
+
+  // Arc path (annular segment)
+  function arc(r1, r2, a1, a2) {
+    const C = Math.cos, S = Math.sin;
+    const large = (a2 - a1) > Math.PI ? 1 : 0;
+    return [
+      `M${cx+r1*C(a1)},${cy+r1*S(a1)}`,
+      `A${r1},${r1},0,${large},1,${cx+r1*C(a2)},${cy+r1*S(a2)}`,
+      `L${cx+r2*C(a2)},${cy+r2*S(a2)}`,
+      `A${r2},${r2},0,${large},0,${cx+r2*C(a1)},${cy+r2*S(a1)}`,
+      'Z'
+    ].join(' ');
+  }
+
+  // Mid-point on an arc radius
+  function midPt(r, a1, a2) {
+    const m = (a1 + a2) / 2;
+    return [cx + r * Math.cos(m), cy + r * Math.sin(m)];
+  }
+
+  function fV(v) {
+    const s = displayCurrency === 'NIS' ? '₪' : '$';
+    return v >= 1e6 ? s + (v/1e6).toFixed(1) + 'M' : s + Math.round(v/1000) + 'K';
+  }
+
+  // ── Build paths ──
+  const innerPaths = [], outerPaths = [];
+  let angle = -Math.PI / 2;   // start at top (12 o'clock)
+
+  categories.forEach(cat => {
+    const catSpan = (cat.total / totalValue) * Math.PI * 2 - IGAP;
+    const a1 = angle + IGAP / 2;
+    const a2 = a1 + catSpan;
+
+    innerPaths.push({ seg:cat.seg, a1, a2, rgb:cat.rgb, fill:toRGB(cat.rgb),
+      label:cat.label, total:cat.total, pct:cat.total / totalValue * 100 });
+
+    // Outer items span proportionally within their parent's angular range
+    let ia = a1;
+    cat.items.forEach((item, ii) => {
+      const iSpan = (item.marketValue / cat.total) * catSpan - OGAP;
+      const ia1 = ia + OGAP / 2;
+      const ia2 = ia1 + iSpan;
+      const t = ii / Math.max(cat.items.length - 1, 1);
+      // Alternate light/dark shades for visual differentiation between adjacent items
+      const itemFill = ii % 2 === 0 ? shade(cat.rgb, 0.15 + t * 0.28) : shade(cat.rgb, 0.05 + t * 0.12);
+      outerPaths.push({
+        seg: cat.seg, a1: ia1, a2: ia2, fill: itemFill, rgb: cat.rgb,
+        symbol: item.symbol.replace('.TA',''), name: item.name,
+        value: item.marketValue, pct: item.marketValue / totalValue * 100,
+        gainPct: item.gainPct || 0,
+      });
+      ia += (item.marketValue / cat.total) * catSpan;
+    });
+
+    angle += catSpan + IGAP;
+  });
+
+  // ── SVG inner ring ──
+  const innerSVG = innerPaths.map((p, i) => {
+    const [lx, ly] = midPt((R0 + R1) / 2, p.a1, p.a2);
+    const show = p.pct > 4;
+    const tipLabel = `${p.label}|${fV(p.total)}|${p.pct.toFixed(1)}%`;
+    return `
+      <path class="sb-seg sb-inner" data-seg="${p.seg}" data-tip="${tipLabel}"
+        d="${arc(R0+4, R1-3, p.a1, p.a2)}" fill="${p.fill}"
+        onclick="sbClick('${p.seg}')" />
+      ${show ? `
+        <text x="${lx}" y="${ly - 9}" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-size="13" font-weight="700"
+          style="pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))">${p.label}</text>
+        <text x="${lx}" y="${ly + 9}" text-anchor="middle" dominant-baseline="middle"
+          fill="rgba(255,255,255,0.82)" font-size="12" font-weight="600"
+          style="pointer-events:none">${p.pct.toFixed(0)}%</text>` : ''}`;
+  }).join('');
+
+  // ── SVG outer ring ──
+  const outerSVG = outerPaths.map((p, i) => {
+    const [lx, ly] = midPt((R1 + R2) / 2, p.a1, p.a2);
+    const show = p.pct > 1.5;
+    // Encode gainPct as last field (use # as safe separator inside data-tip)
+    const tipLabel = `${p.symbol}|${fV(p.value)}|${p.pct.toFixed(1)}%|${p.gainPct.toFixed(1)}`;
+    return `
+      <path class="sb-seg sb-outer" data-seg="${p.seg}" data-tip="${tipLabel}"
+        d="${arc(R1+3, R2-3, p.a1, p.a2)}" fill="${p.fill}"
+        onclick="sbClick('${p.seg}')" />
+      ${show ? `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
+        fill="white" font-size="10" font-weight="700"
+        style="pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))"
+      >${p.symbol}</text>` : ''}`;
+  }).join('');
+
+  // ── Legend ──
+  const legendHTML = categories.map(cat => `
+    <div class="sb-legend-item" onclick="sbClick('${cat.seg}')"
+      style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 10px;border-radius:6px;transition:background .15s"
+      onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background='transparent'">
+      <span style="width:10px;height:10px;border-radius:2px;flex-shrink:0;background:${toRGB(cat.rgb)}"></span>
+      <span style="font-size:11px;font-weight:600;color:var(--text)">${cat.label}</span>
+      <span style="font-size:11px;color:var(--muted)">${fV(cat.total)}</span>
+      <span style="font-size:10px;color:var(--muted);padding:1px 5px;background:var(--surface2);border-radius:3px">${(cat.total/totalValue*100).toFixed(0)}%</span>
+    </div>`).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+      <div style="position:relative;display:inline-block">
+        <svg id="sunburstSVG" viewBox="0 0 ${SIZE} ${SIZE}"
+          width="${SIZE}" height="${SIZE}"
+          style="max-width:min(${SIZE}px,100%);height:auto;display:block;overflow:visible"
+          onmousemove="sbMove(event)" onmouseleave="sbOut()">
+          <!-- Outer ring -->
+          <g id="sbOuter">${outerSVG}</g>
+          <!-- Inner ring -->
+          <g id="sbInner">${innerSVG}</g>
+          <!-- Center circle (click to reset) -->
+          <circle cx="${cx}" cy="${cy}" r="${R0}" fill="var(--surface2)"
+            style="cursor:pointer" onclick="sbReset()" />
+          <text x="${cx}" y="${cy-16}" text-anchor="middle" fill="var(--muted)"
+            font-size="10" font-weight="600" letter-spacing=".8"
+            style="pointer-events:none">PORTFOLIO</text>
+          <text x="${cx}" y="${cy+5}" id="sbCenterVal" text-anchor="middle"
+            fill="var(--text)" font-size="16" font-weight="700"
+            style="pointer-events:none">${fV(totalValue)}</text>
+          <text x="${cx}" y="${cy+20}" id="sbCenterSub" text-anchor="middle"
+            fill="var(--muted)" font-size="10"
+            style="pointer-events:none">click to explore</text>
+        </svg>
+        <!-- Floating tooltip -->
+        <div id="sbTip" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;pointer-events:none;white-space:nowrap;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5)"></div>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${legendHTML}</div>
+      <div style="font-size:10px;color:var(--muted);opacity:.7">Click any segment or legend item to focus · Click center to reset</div>
+    </div>`;
+
+  // Store for interaction callbacks
+  window._sbState = { categories, innerPaths, outerPaths, totalValue, fV };
+  _sbFocused = null;
+
+  // Attach hover listeners via event delegation (avoids large inline handlers)
+  const svg = document.getElementById('sunburstSVG');
+  if (svg) {
+    svg.addEventListener('mouseover', e => {
+      const path = e.target.closest('.sb-seg');
+      if (!path) return;
+      const parts = (path.dataset.tip || '').split('|');
+      const [name, val, pct, gainRaw] = parts;
+      const tip = document.getElementById('sbTip');
+      if (tip && name) {
+        let html = `<strong style="color:var(--text)">${name}</strong>&nbsp;<span style="color:var(--muted)">(${val}&nbsp;·&nbsp;<span style="color:var(--gold)">${pct} portf.</span>`;
+        if (gainRaw !== undefined) {
+          const gNum = parseFloat(gainRaw);
+          const gColor = gNum >= 0 ? 'var(--green)' : 'var(--red)';
+          const gSign  = gNum >= 0 ? '+' : '';
+          html += `&nbsp;·&nbsp;<span style="color:${gColor};font-weight:700">${gSign}${gNum.toFixed(1)}% return</span>`;
+        }
+        html += ')</span>';
+        tip.innerHTML = html;
+        tip.style.display = 'block';
+      }
+      if (!_sbFocused || _sbFocused === path.dataset.seg) {
+        path.style.filter = 'brightness(1.22) drop-shadow(0 0 6px rgba(255,255,255,.25))';
+      }
+    });
+  }
+}
+
+function sbMove(e) {
+  const tip = document.getElementById('sbTip');
+  if (tip && tip.style.display !== 'none') {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = (e.clientY - 38) + 'px';
+  }
+}
+
+function sbOut() {
+  const tip = document.getElementById('sbTip');
+  if (tip) tip.style.display = 'none';
+  document.querySelectorAll('.sb-seg').forEach(el => {
+    if (!_sbFocused || el.dataset.seg === _sbFocused) el.style.filter = '';
+  });
+}
+
+function sbClick(seg) {
+  if (_sbFocused === seg) { sbReset(); return; }
+  _sbFocused = seg;
+
+  document.querySelectorAll('.sb-seg').forEach(el => {
+    const match = el.dataset.seg === seg;
+    el.style.opacity = match ? '1' : '0.18';
+    el.style.filter  = match ? '' : 'grayscale(1) blur(0.4px)';
+  });
+
+  const state = window._sbState;
+  if (state) {
+    const cat = state.categories.find(c => c.seg === seg);
+    if (cat) {
+      const v = document.getElementById('sbCenterVal');
+      const s = document.getElementById('sbCenterSub');
+      if (v) v.textContent = state.fV(cat.total);
+      if (s) s.textContent = cat.label + ' · ' + (cat.total / state.totalValue * 100).toFixed(0) + '%';
+    }
+  }
+}
+
+function sbReset() {
+  _sbFocused = null;
+  document.querySelectorAll('.sb-seg').forEach(el => {
+    el.style.opacity = '1';
+    el.style.filter  = '';
+  });
+  const state = window._sbState;
+  if (state) {
+    const v = document.getElementById('sbCenterVal');
+    const s = document.getElementById('sbCenterSub');
+    if (v) v.textContent = state.fV(state.totalValue);
+    if (s) s.textContent = 'click to explore';
+  }
+}
+
+// ─────────────────────────────────────────────
+// Portfolio Heatmap (treemap)
+// ─────────────────────────────────────────────
+
+/** Map gain % to a fill color: red → neutral dark → green */
+function gainColor(pct) {
+  const n = [40, 45, 70]; // neutral (0%)
+  if (pct >= 0) {
+    const t = Math.min(pct / 100, 1);
+    return `rgb(${Math.round(n[0]*(1-t)+15*t)},${Math.round(n[1]*(1-t)+190*t)},${Math.round(n[2]*(1-t)+70*t)})`;
+  } else {
+    const t = Math.min(Math.abs(pct) / 60, 1);
+    return `rgb(${Math.round(n[0]*(1-t)+220*t)},${Math.round(n[1]*(1-t)+35*t)},${Math.round(n[2]*(1-t)+40*t)})`;
+  }
+}
+
+function renderHeatmap() {
+  const container = document.getElementById('heatmapView');
+  if (!container) return;
+
+  const rows = PORTFOLIO.map(computeRow).filter(r => r.marketValue > 0);
+  const totalValue = rows.reduce((s, r) => s + r.marketValue, 0);
+  if (!totalValue) { container.innerHTML = '<p style="color:var(--muted);padding:20px">No data</p>'; return; }
+
+  // Segment ordering + labels (same keys as sunburst)
+  const CAT_ORDER  = ['USA ETF','US Stocks','Europe','IL','Bitcoin'];
+  const CAT_LABELS = { 'USA ETF':'USA ETF', 'US Stocks':'US Stocks', 'Europe':'Europe', 'IL':'Israel', 'Bitcoin':'Bitcoin' };
+  const CAT_RGB    = { 'USA ETF':[92,124,250], 'US Stocks':[62,207,142], 'Europe':[183,148,244], 'IL':[246,173,85], 'Bitcoin':[245,101,101] };
+
+  const grouped = {};
+  rows.forEach(r => { (grouped[r.segment] = grouped[r.segment] || []).push(r); });
+
+  const segments = CAT_ORDER
+    .filter(seg => grouped[seg]?.length)
+    .map(seg => {
+      const items = grouped[seg].sort((a, b) => b.marketValue - a.marketValue);
+      const segTotal = items.reduce((s, r) => s + r.marketValue, 0);
+      return { seg, label: CAT_LABELS[seg], rgb: CAT_RGB[seg], items, segTotal };
+    })
+    .filter(s => s.segTotal > 0)
+    .sort((a, b) => b.segTotal - a.segTotal);
+
+  // Canvas dimensions — getBoundingClientRect() forces a synchronous reflow
+  // so we get the correct width even when called right after display:block
+  const W   = Math.max(container.getBoundingClientRect().width || container.clientWidth || 900, 400);
+  const HDR = 24;  // segment header height
+  const H   = 500; // total SVG height
+  const IH  = H - HDR; // holdings area height
+  const GAP = 3;  // px gap between cells
+
+  // Store per-cell tooltip data (avoids escaping hell in attributes)
+  const _hmData = [];
+
+  let cellsSvg = '', labelsSvg = '';
+  let curX = 0;
+
+  segments.forEach(seg => {
+    const segW   = (seg.segTotal / totalValue) * W;
+    const cellW  = segW - GAP;
+    const segPct = (seg.segTotal / totalValue * 100).toFixed(1);
+    const hdrFill = `rgb(${seg.rgb[0]},${seg.rgb[1]},${seg.rgb[2]})`;
+
+    // Segment header rectangle
+    cellsSvg += `<rect x="${curX.toFixed(1)}" y="0" width="${Math.max(cellW,1).toFixed(1)}" height="${HDR-1}" fill="${hdrFill}" opacity="0.92" rx="3"/>`;
+
+    // Segment label — show name + % if enough room
+    const lblX = (curX + cellW / 2).toFixed(1);
+    const segLabel = cellW > 60 ? `${seg.label} ${segPct}%` : cellW > 36 ? seg.label : '';
+    if (segLabel) {
+      labelsSvg += `<text x="${lblX}" y="${(HDR/2+1).toFixed(1)}" font-size="11" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${segLabel}</text>`;
+    }
+
+    // Holdings
+    let curY = HDR;
+    seg.items.forEach(item => {
+      const cellH  = (item.marketValue / seg.segTotal) * IH;
+      const rectH  = Math.max(cellH - GAP, 1);
+      const fill   = gainColor(item.gainPct);
+      const sym    = item.symbol.replace('.TA','');
+      const idx    = _hmData.length;
+      _hmData.push({ symbol:sym, name:item.name, value:item.marketValue,
+                     pct:item.marketValue/totalValue*100, gainPct:item.gainPct,
+                     dailyChangePct:item.dailyChangePct||0, seg:seg.label });
+
+      cellsSvg += `<rect class="hm-cell-rect" data-idx="${idx}" x="${curX.toFixed(1)}" y="${curY.toFixed(1)}" width="${Math.max(cellW,1).toFixed(1)}" height="${rectH.toFixed(1)}" fill="${fill}" rx="2" onmouseenter="hmOver(this,event)" onmousemove="hmMove(event)" onmouseleave="hmOut()"/>`;
+
+      // Text labels — only when there's enough room
+      // Pin text near the top of the cell (capped at center for small cells)
+      // so labels are always visible when the top of a tall cell is in view
+      const cx   = (curX + cellW/2).toFixed(1);
+      const sign = item.gainPct >= 0 ? '+' : '';
+      // anchor: 20px from top, but no more than half-way into cell
+      const anchor = curY + Math.min(cellH/2 - GAP/2, 26);
+
+      if (cellW > 44 && cellH > 40) {
+        const fs   = Math.min(13, Math.floor(cellW / 5));
+        const symY = anchor.toFixed(1);
+        const pctY = (anchor + 15).toFixed(1);
+        labelsSvg += `<text x="${cx}" y="${symY}" font-size="${fs}" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${sym}</text>`;
+        labelsSvg += `<text x="${cx}" y="${pctY}" font-size="${Math.min(11,Math.floor(cellW/6))}" fill="rgba(255,255,255,.82)" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${sign}${item.gainPct.toFixed(1)}%</text>`;
+      } else if (cellW > 26 && cellH > 22) {
+        const fs = Math.min(11, Math.floor(cellW / 4.5));
+        labelsSvg += `<text x="${cx}" y="${anchor.toFixed(1)}" font-size="${fs}" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${sym}</text>`;
+      }
+
+      curY += cellH;
+    });
+
+    curX += segW;
+  });
+
+  // Stash data so hmOver() can find it
+  window._hmData = _hmData;
+
+  container.innerHTML = `
+    <svg width="${W}" height="${H}" style="display:block;max-width:100%;border-radius:8px;overflow:hidden;cursor:default">
+      ${cellsSvg}
+      ${labelsSvg}
+    </svg>
+    <div class="hm-legend">
+      <span>Loss</span>
+      <div style="width:160px;height:10px;border-radius:4px;background:linear-gradient(to right,rgb(220,35,40),rgb(40,45,70),rgb(15,190,70))"></div>
+      <span>Gain</span>
+      <span style="margin-left:16px;font-size:9px;color:var(--muted)">Cell size = portfolio weight &nbsp;·&nbsp; Color = total return since purchase</span>
+    </div>
+    <div id="hmTip" style="position:fixed;pointer-events:none;display:none;z-index:9999;background:rgba(15,17,23,.97);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;max-width:230px;line-height:1.65"></div>
+  `;
+}
+
+function hmOver(el, event) {
+  const tip = document.getElementById('hmTip');
+  if (!tip || !window._hmData) return;
+  const d = window._hmData[+el.dataset.idx];
+  if (!d) return;
+
+  const fV = v => {
+    if (displayCurrency === 'NIS') return v >= 1e6 ? '₪' + (v/1e6).toFixed(2)+'M' : '₪' + Math.round(v/1000)+'K';
+    const usd = v / (fxRate || 3.68);
+    return usd >= 1e6 ? '$' + (usd/1e6).toFixed(2)+'M' : '$' + Math.round(usd/1000)+'K';
+  };
+  const sign  = d.gainPct >= 0 ? '+' : '';
+  const gCol  = d.gainPct >= 0 ? 'var(--green)' : 'var(--red)';
+  const dSign = d.dailyChangePct >= 0 ? '+' : '';
+  const dCol  = d.dailyChangePct >= 0 ? 'var(--green)' : 'var(--red)';
+
+  tip.innerHTML = `
+    <div style="font-weight:700;font-size:13px;margin-bottom:2px">${d.symbol}
+      <span style="font-size:11px;color:var(--muted);font-weight:400">&nbsp;${d.name}</span>
+    </div>
+    <div style="color:var(--muted);font-size:11px;margin-bottom:6px">${d.seg}</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px">
+      <span style="color:var(--muted)">Value</span>      <span>${fV(d.value)}</span>
+      <span style="color:var(--muted)">Weight</span>     <span>${d.pct.toFixed(2)}%</span>
+      <span style="color:var(--muted)">Total return</span><span style="color:${gCol};font-weight:700">${sign}${d.gainPct.toFixed(1)}%</span>
+      <span style="color:var(--muted)">Today</span>      <span style="color:${dCol}">${dSign}${d.dailyChangePct.toFixed(2)}%</span>
+    </div>`;
+  tip.style.display = 'block';
+  hmMove(event);
+}
+
+function hmMove(event) {
+  const tip = document.getElementById('hmTip');
+  if (!tip || tip.style.display === 'none') return;
+  const pad = 14, tw = tip.offsetWidth || 230, th = tip.offsetHeight || 110;
+  const lx = event.clientX + pad;
+  const ly = event.clientY - 10;
+  tip.style.left = (lx + tw > window.innerWidth  ? event.clientX - tw - pad : lx) + 'px';
+  tip.style.top  = (ly + th > window.innerHeight ? event.clientY - th - 10  : ly) + 'px';
+}
+
+function hmOut() {
+  const tip = document.getElementById('hmTip');
+  if (tip) tip.style.display = 'none';
+}
+
+// ─────────────────────────────────────────────
+// Target Allocation Gap Analysis
+// ─────────────────────────────────────────────
+
+/** No-op — kept for compatibility; target inputs are now inline spinners in the gap table */
+function initTargetInputs() {}
+function updateTgtSum() {}
+function saveTargets() {}
+
+/** Reset targets to defaults */
+function resetTargets() {
+  TARGET_ALLOCATION = Object.assign({}, TARGET_DEFAULTS);
+  localStorage.removeItem('portfolioTargetAlloc');
+  analyzeGaps();
+}
+
+/** Inline ▲▼ spinner in the TARGET column — adjust one category by ±1 and auto-save */
+function adjustTarget(key, delta) {
+  const cur = TARGET_ALLOCATION[key] || 0;
+  TARGET_ALLOCATION[key] = Math.max(0, Math.min(100, cur + delta));
+  localStorage.setItem('portfolioTargetAlloc', JSON.stringify(TARGET_ALLOCATION));
+  analyzeGaps(); // re-compute + re-render gap table
+}
+
+/** Always convert a native-currency amount to NIS */
+function toNIS(amount, fromCurrency) {
+  return fromCurrency === 'NIS' ? amount : amount * fxRate;
+}
+
+/** Persist cash whenever user types */
+function saveCash() {
+  const v = parseFloat(document.getElementById('cashInput')?.value) || 0;
+  cashNIS = v;
+  localStorage.setItem('portfolioCashNIS', v.toString());
+}
+
+/** Run gap analysis against TARGET_ALLOCATION — computes data then delegates to renderGapTable() */
+function analyzeGaps() {
+  saveCash();
+  const rows = PORTFOLIO.map(r => ({ ...r }));
+
+  // Compute NIS market value for each row (using raw currentPrice, not computeRow which uses displayCurrency)
+  const nisVal = r => toNIS(r.currentPrice * r.qty, r.currentCurrency);
+
+  const buckets = {
+    usa:     rows.filter(r => r.segment === 'USA ETF'  ).reduce((s, r) => s + nisVal(r), 0),
+    europe:  rows.filter(r => r.segment === 'Europe'   ).reduce((s, r) => s + nisVal(r), 0),
+    israel:  rows.filter(r => r.segment === 'IL'       ).reduce((s, r) => s + nisVal(r), 0),
+    bitcoin: rows.filter(r => r.segment === 'Bitcoin'  ).reduce((s, r) => s + nisVal(r), 0),
+    stocks:  rows.filter(r => r.segment === 'US Stocks').reduce((s, r) => s + nisVal(r), 0),
+  };
+  const totalInvested = Object.values(buckets).reduce((s, v) => s + v, 0);
+  const total         = totalInvested + cashNIS;
+
+  const EMOJIS = { usa:'🇺🇸', europe:'🇪🇺', israel:'🇮🇱', bitcoin:'₿', stocks:'📈', cash:'💵' };
+  const NAMES  = { usa:'USA ETF', europe:'Europe', israel:'Israel', bitcoin:'Bitcoin', stocks:'Stocks', cash:'Cash' };
+  const allBuckets = { ...buckets, cash: cashNIS };
+
+  const tableRows = Object.entries(TARGET_ALLOCATION).map(([key, tgt]) => {
+    const cur    = allBuckets[key] || 0;
+    const curPct = total > 0 ? cur / total * 100 : 0;
+    const gapPct = curPct - tgt;
+    const gapAbs = cur - total * tgt / 100;   // positive = excess ₪, negative = shortfall ₪
+    return { key, label: `${EMOJIS[key]} ${NAMES[key]}`, target: tgt, curPct, gapPct, gapAbs };
+  });
+
+  gapAnalysisData = { total, cashNIS, buckets, tableRows };
+  renderGapTable();
+  generateInsights(); // refresh insights panel with gap context
+}
+
+/** Render (or re-render) the gap table — call after sort changes too */
+function renderGapTable() {
+  const el = document.getElementById('gapAnalysis');
+  if (!el) return;
+
+  if (!gapAnalysisData || gapAnalysisData.total <= 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:6px 0">Enter your cash amount above, then click Analyze.</div>';
+    return;
+  }
+
+  const { total, cashNIS: cash, tableRows } = gapAnalysisData;
+
+  const fmtNIS = v => {
+    if (Math.abs(v) >= 1e6) return '₪' + (v / 1e6).toFixed(2) + 'M';
+    if (Math.abs(v) >= 1e3) return '₪' + (v / 1000).toFixed(2) + 'K';
+    return '₪' + Math.round(v);
+  };
+
+  // Sort a copy of the rows
+  const sorted = [...tableRows].sort((a, b) => {
+    let av, bv;
+    if      (gapSortCol === 'category') { av = a.label;            bv = b.label; }
+    else if (gapSortCol === 'target'  ) { av = a.target;           bv = b.target; }
+    else if (gapSortCol === 'now'     ) { av = a.curPct;           bv = b.curPct; }
+    else                               { av = Math.abs(a.gapPct);  bv = Math.abs(b.gapPct); } // gap: magnitude
+    if (typeof av === 'string') return gapSortDir * av.localeCompare(bv);
+    return gapSortDir * (av - bv);
+  });
+
+  // Sort-arrow helper
+  const arrow = col => {
+    if (gapSortCol !== col) return '<span style="opacity:.28;font-size:9px">⇅</span>';
+    return `<span style="color:var(--accent);font-size:10px">${gapSortDir > 0 ? '↑' : '↓'}</span>`;
+  };
+
+  const rowsHtml = sorted.map(({ key, label, target, curPct, gapPct, gapAbs }) => {
+    let gapCls, actionText;
+    if (Math.abs(gapPct) < 1) {
+      gapCls = 'gap-ok';  actionText = 'On target ✓';
+    } else if (gapPct > 0) {
+      gapCls = 'gap-neg'; actionText = `Trim ${fmtNIS(gapAbs)}`;
+    } else {
+      gapCls = 'gap-pos'; actionText = `Add ${fmtNIS(-gapAbs)}`;
+    }
+    return `<tr>
+      <td><span class="gap-label">${label}</span><span class="gap-action">${actionText}</span></td>
+      <td style="text-align:right">
+        <div class="tgt-spin">
+          <div class="tgt-spin-col">
+            <button class="tgt-spin-btn" onclick="adjustTarget('${key}',1)" title="Increase target">▲</button>
+            <button class="tgt-spin-btn" onclick="adjustTarget('${key}',-1)" title="Decrease target">▼</button>
+          </div>
+          <span style="color:var(--muted);min-width:22px;text-align:right">${target}%</span>
+        </div>
+      </td>
+      <td>${curPct.toFixed(1)}%</td>
+      <td class="${gapCls}">${gapPct > 0 ? '+' : ''}${gapPct.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+
+  // Free cash to invest = cash - (total × cash target %)
+  const cashTarget = total * TARGET_ALLOCATION.cash / 100;
+  const freeCash   = cash - cashTarget;
+  const fcPositive = freeCash >= 0;
+  const fcColor    = fcPositive ? 'var(--green)' : 'var(--red)';
+  const fcIcon     = fcPositive ? '💰' : '⚠️';
+  const fcText     = fcPositive
+    ? `${fcIcon} Free cash to invest: <strong>${fmtNIS(freeCash)}</strong>`
+    : `${fcIcon} Cash below 6% target by: <strong>${fmtNIS(-freeCash)}</strong>`;
+
+  // Targets sum check (show warning if edited targets don't sum to 100)
+  const tgtSum = Object.values(TARGET_ALLOCATION).reduce((s,v) => s+v, 0);
+  const tgtOk  = Math.abs(tgtSum - 100) < 0.5;
+  const tgtNote = tgtOk ? '' :
+    `<span style="color:var(--gold);font-size:10px;margin-left:6px">⚠️ Targets = ${tgtSum}%</span>`;
+
+  el.innerHTML = `
+    <div class="gap-total-bar">
+      <span>Total incl. cash${tgtNote}</span>
+      <strong style="color:var(--text)">${fmtNIS(total)}</strong>
+    </div>
+    <table class="gap-table">
+      <thead><tr>
+        <th class="gap-sort-th" onclick="sortGapTable('category')">Category&nbsp;${arrow('category')}</th>
+        <th class="gap-sort-th" onclick="sortGapTable('target')" style="text-align:right">Target&nbsp;${arrow('target')}</th>
+        <th class="gap-sort-th" onclick="sortGapTable('now')" style="text-align:right">Now&nbsp;${arrow('now')}</th>
+        <th class="gap-sort-th" onclick="sortGapTable('gap')" style="text-align:right">Gap&nbsp;${arrow('gap')}</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="gap-free-cash" style="color:${fcColor}">${fcText}</div>`;
+}
+
+/** Toggle sort column / direction and re-render */
+function sortGapTable(col) {
+  if (gapSortCol === col) {
+    gapSortDir *= -1;             // same column → flip direction
+  } else {
+    gapSortCol = col;
+    gapSortDir = (col === 'gap') ? -1 : 1; // gap defaults desc (biggest first), others asc
+  }
+  renderGapTable();
+}
+
+async function loadMarketIndexes() {
+  const el = document.getElementById('marketIndexes');
+  if (!el) return;
+  const results = await Promise.allSettled(MARKET_INDEXES.map(idx =>
+    fetchIndexQuote(idx.ticker).then(q => ({ ...idx, ...q }))
+  ));
+  marketIndexData = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+  el.innerHTML = results.map(r => {
+    if (r.status !== 'fulfilled') {
+      return `<div class="idx-row"><span class="idx-name">${r.reason?.ticker || '—'}</span><span class="idx-loading">—</span></div>`;
+    }
+    const d = r.value;
+    const sign = d.chgPct >= 0 ? '+' : '';
+    const cls  = d.chgPct >= 0 ? 'pos' : 'neg';
+    return `<div class="idx-row">
+      <span class="idx-name">${d.name}</span>
+      <span class="idx-price">${fmtIdx(d.price, d.currency)}</span>
+      <span class="idx-chg ${cls}">${d.chgPct != null ? sign + d.chgPct.toFixed(2) + '%' : '—'}</span>
+    </div>`;
+  }).join('');
+  generateInsights(); // re-run with live index context
+}
+
+// ─────────────────────────────────────────────
+// Event handlers
+// ─────────────────────────────────────────────
+function setCurrency(c) {
+  displayCurrency = c;
+  document.getElementById('btnUSD').classList.toggle('active', c === 'USD');
+  document.getElementById('btnNIS').classList.toggle('active', c === 'NIS');
+  renderAll();
+}
+
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  renderTable();
+}
+
+function updatePillPlus(group) {
+  // Remove existing "+" signs in this group
+  const container = document.querySelectorAll(`.pill[data-group="${group}"]`)[0]?.parentElement;
+  if (!container) return;
+  container.querySelectorAll('.pill-plus').forEach(el => el.remove());
+  // Insert "+" between consecutive active pills (skip "All")
+  const activePills = [...container.querySelectorAll(`.pill[data-group="${group}"].active:not([data-val="All"])`)];
+  for (let i = 1; i < activePills.length; i++) {
+    const plus = document.createElement('span');
+    plus.className = 'pill-plus';
+    plus.textContent = '+';
+    activePills[i].parentElement.insertBefore(plus, activePills[i]);
+  }
+}
+
+document.querySelectorAll('.pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.group;
+    const val   = btn.dataset.val;
+    const set   = activeFilters[group]; // always a Set now
+
+    if (val === 'All') {
+      activeFilters[group] = new Set(['All']);
+    } else {
+      set.delete('All');
+      if (set.has(val)) {
+        set.delete(val);
+        if (set.size === 0) set.add('All');
+      } else {
+        set.add(val);
+      }
+    }
+    document.querySelectorAll(`.pill[data-group="${group}"]`).forEach(b =>
+      b.classList.toggle('active', activeFilters[group].has(b.dataset.val))
+    );
+    updatePillPlus(group);
+    updateClearBtn();
+    renderTable();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', renderTable);
+
+// ─────────────────────────────────────────────
+// Live FX rate  (USD → ILS)
+// ─────────────────────────────────────────────
+async function fetchFxRate() {
+  const dot = document.getElementById('fxDot');
+  const display = document.getElementById('fxRateDisplay');
+  const updated = document.getElementById('fxUpdated');
+  dot.className = 'fx-live-dot loading';
+  try {
+    // Primary: Bank of Israel representative rate via local server proxy
+    let rate = null;
+    try {
+      const boiRes = await fetch('/api/boi-rate');
+      if (boiRes.ok) {
+        const boiData = await boiRes.json();
+        if (boiData.rate) rate = boiData.rate;
+      }
+    } catch (_) { /* local API unavailable */ }
+    // Fallback: open.er-api.com (direct — no CORS issue)
+    if (!rate) {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      rate = data.rates?.ILS;
+    }
+    if (!rate) throw new Error('No FX rate available');
+    fxRate = rate;
+    display.textContent = rate.toFixed(4);
+    const now = new Date();
+    updated.textContent = 'Updated ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    dot.className = 'fx-live-dot';
+    renderAll();
+  } catch (e) {
+    dot.className = 'fx-live-dot error';
+    display.textContent = fxRate.toFixed(4);
+    updated.textContent = 'Offline';
+  }
+}
+
+fetchFxRate();
+setInterval(fetchFxRate, 5 * 60 * 1000);
+
+// ─────────────────────────────────────────────
+// Row expand / collapse
+// ─────────────────────────────────────────────
+document.getElementById('tableBody').addEventListener('click', e => {
+  const row = e.target.closest('.asset-row');
+  if (!row) return;
+  const sym = row.dataset.symbol;
+  if (!PURCHASE_HISTORY[sym]) return;
+  if (expandedSymbols.has(sym)) expandedSymbols.delete(sym);
+  else expandedSymbols.add(sym);
+  renderTable();
+});
+
+// ─────────────────────────────────────────────
+// Portfolio state persistence — server-side (cross-device sync)
+// ─────────────────────────────────────────────
+function savePortfolioState() {
+  // Build the payload with only trade-relevant fields for known symbols,
+  // but full data for symbols added via Trade
+  const tradeData = PORTFOLIO.map(r => ({
+    symbol: r.symbol, name: r.name, type: r.type,
+    exchange: r.exchange, country: r.country, segment: r.segment,
+    qty: r.qty, avgCost: r.avgCost, avgCostCurrency: r.avgCostCurrency,
+  }));
+  const payload = JSON.stringify({
+    portfolio: tradeData,
+    purchaseHistory: PURCHASE_HISTORY,
+    sellHistory: SELL_HISTORY,
+  });
+
+  // Save to server (primary — syncs across all devices)
+  fetch('/api/portfolio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+  }).catch(() => { /* server unreachable — local copy still saved below */ });
+
+  // Also save to localStorage (offline fallback)
+  try {
+    localStorage.setItem('portfolioData', JSON.stringify(PORTFOLIO));
+    localStorage.setItem('purchaseHistoryData', JSON.stringify(PURCHASE_HISTORY));
+    localStorage.setItem('sellHistoryData', JSON.stringify(SELL_HISTORY));
+  } catch(e) {}
+}
+
+function _mergePortfolioData(saved, savedHistory, savedSellHistory) {
+  // Merge saved trade data into the hardcoded PORTFOLIO array
+  if (saved && Array.isArray(saved)) {
+    const hardcoded = new Map(PORTFOLIO.map(r => [r.symbol, r]));
+    saved.forEach(s => {
+      const h = hardcoded.get(s.symbol);
+      if (h) {
+        h.qty     = s.qty;
+        h.avgCost = s.avgCost;
+        if (s.avgCostCurrency) h.avgCostCurrency = s.avgCostCurrency;
+      } else {
+        // New symbol added via Trade — keep everything
+        PORTFOLIO.push(s);
+      }
+    });
+  }
+  if (savedHistory && typeof savedHistory === 'object') {
+    for (const k of Object.keys(PURCHASE_HISTORY)) delete PURCHASE_HISTORY[k];
+    Object.assign(PURCHASE_HISTORY, savedHistory);
+  }
+  if (savedSellHistory && typeof savedSellHistory === 'object') {
+    for (const k of Object.keys(SELL_HISTORY)) delete SELL_HISTORY[k];
+    Object.assign(SELL_HISTORY, savedSellHistory);
+  }
+}
+
+async function loadPortfolioState() {
+  // Try server first (single source of truth for all devices)
+  try {
+    const res = await fetch('/api/portfolio');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.portfolio) {
+        _mergePortfolioData(data.portfolio, data.purchaseHistory, data.sellHistory);
+        return; // success — server data loaded
+      }
+    }
+  } catch(_) { /* server unreachable */ }
+
+  // Fallback: localStorage (works offline / first run before server has data)
+  try {
+    const pd  = localStorage.getItem('portfolioData');
+    const phd = localStorage.getItem('purchaseHistoryData');
+    if (pd) {
+      const shd = localStorage.getItem('sellHistoryData');
+      _mergePortfolioData(JSON.parse(pd), phd ? JSON.parse(phd) : null, shd ? JSON.parse(shd) : null);
+    }
+  } catch(e) {}
+}
+
+async function resetPortfolio() {
+  if (!confirm('Reset portfolio to original hardcoded data? All trades added via the modal will be lost.')) return;
+  // Clear server data
+  try {
+    await fetch('/api/portfolio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portfolio: null, purchaseHistory: null }),
+    });
+  } catch(_) {}
+  // Clear local data
+  localStorage.removeItem('portfolioData');
+  localStorage.removeItem('purchaseHistoryData');
+  localStorage.removeItem('sellHistoryData');
+  location.reload();
+}
+
+// ─────────────────────────────────────────────
+// Trade modal
+// ─────────────────────────────────────────────
+let tradeMode = 'buy';
+
+function openTradeModal() {
+  // Populate buy datalist
+  document.getElementById('symbolList').innerHTML =
+    PORTFOLIO.map(r => `<option value="${r.symbol}">`).join('');
+
+  // Populate sell select
+  const sellSel = document.getElementById('sell-symbol');
+  sellSel.innerHTML = PORTFOLIO.map(r =>
+    `<option value="${r.symbol}">${r.symbol} — ${r.qty % 1 === 0 ? r.qty : r.qty.toFixed(3)} held</option>`
+  ).join('');
+  updateSellMax();
+
+  // Set today as default date
+  const todayStr = new Date().toISOString().split('T')[0];
+  document.getElementById('buy-date').value  = todayStr;
+  document.getElementById('sell-date').value = todayStr;
+
+  // Clear messages
+  document.getElementById('buyMsg').textContent  = '';
+  document.getElementById('sellMsg').textContent = '';
+
+  document.getElementById('tradeOverlay').style.display = 'flex';
+}
+
+function closeTradeModal() {
+  document.getElementById('tradeOverlay').style.display = 'none';
+}
+
+function setTradeMode(mode) {
+  tradeMode = mode;
+  document.getElementById('buyForm').style.display  = mode === 'buy'  ? '' : 'none';
+  document.getElementById('sellForm').style.display = mode === 'sell' ? '' : 'none';
+  document.getElementById('tradeTabBuy').className  = 'trade-tab buy'  + (mode === 'buy'  ? ' active' : '');
+  document.getElementById('tradeTabSell').className = 'trade-tab sell' + (mode === 'sell' ? ' active' : '');
+}
+
+function onBuySymbolChange() {
+  const sym    = document.getElementById('buy-symbol').value.trim().toUpperCase();
+  const exists = PORTFOLIO.some(r => r.symbol === sym);
+  document.getElementById('buy-new-fields').style.display = exists ? 'none' : '';
+}
+
+function updateSellMax() {
+  const sym = document.getElementById('sell-symbol').value;
+  const r   = PORTFOLIO.find(r => r.symbol === sym);
+  document.getElementById('sell-max-label').textContent = r
+    ? (r.qty % 1 === 0 ? r.qty : r.qty.toFixed(3))
+    : '0';
+}
+
+function submitBuy() {
+  const sym      = document.getElementById('buy-symbol').value.trim().toUpperCase();
+  const dateVal  = document.getElementById('buy-date').value;
+  const qty      = parseFloat(document.getElementById('buy-qty').value);
+  const price    = parseFloat(document.getElementById('buy-price').value);
+  const currency = document.getElementById('buy-currency').value;
+  const msgEl    = document.getElementById('buyMsg');
+  msgEl.style.color = 'var(--muted)';
+
+  if (!sym)            { msgEl.textContent = '⚠ Please enter a symbol.'; return; }
+  if (!dateVal)        { msgEl.textContent = '⚠ Please select a date.'; return; }
+  if (!qty  || qty  <= 0) { msgEl.textContent = '⚠ Qty must be > 0.'; return; }
+  if (!price || price <= 0) { msgEl.textContent = '⚠ Price must be > 0.'; return; }
+
+  // Convert YYYY-MM-DD → DD/MM/YYYY
+  const [y, m, d] = dateVal.split('-');
+  const dateFmt = `${d}/${m}/${y}`;
+
+  const existing = PORTFOLIO.find(r => r.symbol === sym);
+  if (existing) {
+    const oldTotalCost = existing.avgCost * existing.qty;
+    existing.qty      += qty;
+    existing.avgCost   = (oldTotalCost + price * qty) / existing.qty;
+  } else {
+    const name     = document.getElementById('buy-name').value.trim() || sym;
+    const type     = document.getElementById('buy-type').value;
+    const exchange = document.getElementById('buy-exchange').value;
+    const country  = document.getElementById('buy-country').value;
+    const segment  = document.getElementById('buy-segment').value;
+    const curPrice = parseFloat(document.getElementById('buy-current-price').value) || price;
+    PORTFOLIO.push({
+      symbol: sym, name, type, exchange, country, segment,
+      qty, avgCost: price, avgCostCurrency: currency,
+      currentPrice: curPrice, currentCurrency: currency,
+      dailyChangePct: 0,
+    });
+  }
+
+  if (!PURCHASE_HISTORY[sym]) PURCHASE_HISTORY[sym] = [];
+  PURCHASE_HISTORY[sym].push({ date: dateFmt, qty, price, currency });
+
+  savePortfolioState();
+  renderAll();
+  msgEl.style.color = 'var(--green)';
+  msgEl.textContent = `✓ Bought ${qty} × ${sym} @ ${price} ${currency}`;
+  setTimeout(closeTradeModal, 1600);
+}
+
+function submitSell() {
+  const sym      = document.getElementById('sell-symbol').value;
+  const qty      = parseFloat(document.getElementById('sell-qty').value);
+  const dateVal  = document.getElementById('sell-date').value;
+  const sellPx   = parseFloat(document.getElementById('sell-price').value);
+  const msgEl    = document.getElementById('sellMsg');
+  msgEl.style.color = 'var(--muted)';
+
+  if (!qty || qty <= 0)     { msgEl.textContent = '⚠ Qty must be > 0.'; return; }
+  if (!dateVal)             { msgEl.textContent = '⚠ Please select a date.'; return; }
+  if (!sellPx || sellPx<=0) { msgEl.textContent = '⚠ Price must be > 0.'; return; }
+
+  const idx = PORTFOLIO.findIndex(r => r.symbol === sym);
+  if (idx === -1) { msgEl.textContent = '⚠ Symbol not found.'; return; }
+
+  const row = PORTFOLIO[idx];
+  if (qty > row.qty) { msgEl.textContent = `⚠ Only ${row.qty} held.`; return; }
+
+  // Convert date
+  const [y, m, d] = dateVal.split('-');
+  const dateFmt = `${d}/${m}/${y}`;
+
+  // FIFO: figure out which buy lots are consumed
+  const lots = PURCHASE_HISTORY[sym] || [];
+  let remaining = qty;
+  let totalCostBasis = 0;
+  const soldLots = [];
+
+  for (let i = 0; i < lots.length && remaining > 0; i++) {
+    const lot = lots[i];
+    const take = Math.min(lot.qty, remaining);
+    totalCostBasis += take * lot.price;
+    soldLots.push({ qty: take, buyPrice: lot.price, buyDate: lot.date });
+    remaining -= take;
+  }
+
+  const currency = lots.length ? lots[0].currency : row.avgCostCurrency;
+  const avgCostBasis = qty > 0 ? totalCostBasis / qty : 0;
+  const realizedGain = qty * sellPx - totalCostBasis;
+
+  // Record the sell in SELL_HISTORY
+  if (!SELL_HISTORY[sym]) SELL_HISTORY[sym] = [];
+  SELL_HISTORY[sym].push({
+    date: dateFmt, qty, sellPrice: sellPx, currency,
+    costBasis: +(avgCostBasis).toFixed(4),
+    realizedGain: +realizedGain.toFixed(2),
+    lots: soldLots,
+  });
+
+  // Update PURCHASE_HISTORY (FIFO: remove consumed qty from front)
+  let toRemove = qty;
+  while (toRemove > 0 && lots.length > 0) {
+    if (lots[0].qty <= toRemove) {
+      toRemove -= lots[0].qty;
+      lots.shift();
+    } else {
+      lots[0].qty = +(lots[0].qty - toRemove).toFixed(6);
+      toRemove = 0;
+    }
+  }
+
+  // Update or remove the portfolio position
+  if (qty >= row.qty) {
+    PORTFOLIO.splice(idx, 1);
+    delete PURCHASE_HISTORY[sym];
+  } else {
+    row.qty = +(row.qty - qty).toFixed(6);
+    // Recalculate avgCost from remaining lots
+    const remLots = PURCHASE_HISTORY[sym] || [];
+    const totalQty  = remLots.reduce((s, l) => s + l.qty, 0);
+    const totalCost = remLots.reduce((s, l) => s + l.qty * l.price, 0);
+    if (totalQty > 0) row.avgCost = +(totalCost / totalQty).toFixed(4);
+  }
+
+  savePortfolioState();
+  renderAll();
+  msgEl.style.color = 'var(--green)';
+  const gainStr = realizedGain >= 0
+    ? `+${currency === 'NIS' ? '₪' : '$'}${realizedGain.toFixed(2)}`
+    : `${currency === 'NIS' ? '₪' : '$'}${realizedGain.toFixed(2)}`;
+  msgEl.textContent = `✓ Sold ${qty} × ${sym} @ ${sellPx} (${gainStr})`;
+  setTimeout(closeTradeModal, 1600);
+}
+
+// ─────────────────────────────────────────────
+// Market hours check
+// ─────────────────────────────────────────────
+function isMarketOpen() {
+  const now = new Date();
+  const utcMs = now.getTime();
+  const month = now.getUTCMonth(); // 0-11
+
+  // Israel: UTC+2 standard, UTC+3 in summer (roughly Apr–Oct)
+  const ilOffset = (month >= 3 && month <= 9) ? 3 * 60 : 2 * 60;
+  const ilTime   = new Date(utcMs + ilOffset * 60000);
+  const ilDay    = ilTime.getUTCDay();   // 0=Sun
+  const ilMins   = ilTime.getUTCHours() * 60 + ilTime.getUTCMinutes();
+
+  // TASE: Sun–Thu 9:59–17:25 Israel time
+  if (ilDay >= 0 && ilDay <= 4 && ilMins >= 599 && ilMins <= 1045) return true;
+
+  // US market: Mon–Fri 9:30–16:00 ET
+  const etOffset = (month >= 2 && month <= 10) ? -4 * 60 : -5 * 60; // DST roughly Mar–Nov
+  const etTime   = new Date(utcMs + etOffset * 60000);
+  const etDay    = etTime.getUTCDay();
+  const etMins   = etTime.getUTCHours() * 60 + etTime.getUTCMinutes();
+  if (etDay >= 1 && etDay <= 5 && etMins >= 570 && etMins <= 960) return true;
+
+  return false;
+}
+
+// ─────────────────────────────────────────────
+// Auto-refresh toggle
+// ─────────────────────────────────────────────
+function toggleAutoRefresh() {
+  autoRefreshEnabled = !autoRefreshEnabled;
+  localStorage.setItem('portfolioAutoRefresh', autoRefreshEnabled ? '1' : '0');
+  if (autoRefreshEnabled) {
+    autoRefreshTimer = setInterval(() => { if (isMarketOpen()) refreshPrices(); }, 5 * 60 * 1000);
+  } else {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  const btn = document.getElementById('autoRefreshBtn');
+  if (btn) {
+    btn.textContent = autoRefreshEnabled ? '⏸ Auto' : '▶ Auto';
+    btn.classList.toggle('auto-on', autoRefreshEnabled);
+    btn.title = autoRefreshEnabled
+      ? 'Auto-refresh ON — updates every 5 min during market hours'
+      : 'Auto-refresh OFF — click to enable';
+  }
+}
+
+// ─────────────────────────────────────────────
+// Refresh live prices — parallel per-symbol calls via v8/chart
+// (v7/quote batch requires auth; v8/chart is free and reliable)
+// ─────────────────────────────────────────────
+// Track which symbols were successfully refreshed (vs stale)
+const _staleSymbols = new Set();
+
+// Map portfolio .TA symbols → TradingView TASE: symbols
+const TV_TICKER = {
+  'BEZQ.TA':    'TASE:BEZQ',
+  'KSMF74.TA':  'TASE:KSM.F74',
+  'KSMF57.TA':  'TASE:KSM.F57',
+  'HRLF15.TA':  'TASE:HRL.F15',
+  'TCHF12.TA':  'TASE:TCH.F12',
+  'iSFF301.TA': 'TASE:IS.FF301',
+  'iSFF501.TA': 'TASE:IS.FF501',
+  'INFF1.TA':   'TASE:IN.FF1',
+  'iSFF702.TA': 'TASE:IS.FF702',
+};
+// Reverse map: TradingView symbol → portfolio symbol
+const TV_TICKER_REV = Object.fromEntries(Object.entries(TV_TICKER).map(([k,v]) => [v, k]));
+
+async function refreshPrices() {
+  const btn = document.getElementById('refreshBtn');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = '↻ Updating…';
+
+  // ── Phase 1: Yahoo Finance (works for US stocks + BEZQ.TA) ──
+  const results = await Promise.allSettled(
+    PORTFOLIO.map(r => {
+      const ticker = YAHOO_TICKER[r.symbol] || r.symbol;
+      const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+      return fetch('https://corsproxy.io/?' + encodeURIComponent(yUrl))
+        .then(res => res.json())
+        .then(json => {
+          const result = json.chart?.result?.[0];
+          const closes = result?.indicators?.adjclose?.[0]?.adjclose
+                      ?? result?.indicators?.quote?.[0]?.close ?? [];
+          const valid = closes.filter(c => c != null);
+          const last = valid[valid.length - 1];
+          const prev = valid[valid.length - 2];
+          if (last == null) return null;
+          const price    = r.symbol.endsWith('.TA') ? last / 100 : last;
+          const dailyPct = prev != null ? (last - prev) / prev * 100 : 0;
+          return { symbol: r.symbol, price, dailyPct };
+        });
+    })
+  );
+
+  let updated = 0;
+  const failedTA = [];            // TASE symbols that Yahoo couldn't fetch
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && res.value) {
+      const { symbol, price, dailyPct } = res.value;
+      const row = PORTFOLIO.find(p => p.symbol === symbol);
+      if (row) { row.currentPrice = price; row.dailyChangePct = dailyPct; row._stale = false; updated++; }
+      _staleSymbols.delete(symbol);
+    } else if (PORTFOLIO[i].symbol.endsWith('.TA')) {
+      failedTA.push(PORTFOLIO[i].symbol);
+    }
+  });
+
+  // ── Phase 2: TradingView scanner fallback for TASE symbols that failed Yahoo ──
+  if (failedTA.length) {
+    try {
+      const tvTickers = failedTA.map(s => TV_TICKER[s] || ('TASE:' + s.replace('.TA', '')));
+      const tvRes = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://scanner.tradingview.com/israel/scan'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols: { tickers: tvTickers }, columns: ['close', 'change'] })
+      });
+      const tvData = await tvRes.json();
+      (tvData.data || []).forEach(item => {
+        const tvSym = item.s;                              // e.g. "TASE:KSM.F74"
+        const sym   = TV_TICKER_REV[tvSym] || (tvSym.replace('TASE:', '') + '.TA');
+        const close = item.d?.[0];
+        const chg   = item.d?.[1] ?? 0;
+        if (close == null) return;
+        const row = PORTFOLIO.find(p => p.symbol === sym);
+        if (row) {
+          row.currentPrice   = close / 100;   // TradingView returns agorot
+          row.dailyChangePct = chg;
+          row._stale = false;
+          updated++;
+          _staleSymbols.delete(sym);
+          const idx = failedTA.indexOf(sym);
+          if (idx !== -1) failedTA.splice(idx, 1);
+        }
+      });
+    } catch(e) { /* TradingView fallback failed — stale symbols remain */ }
+  }
+
+  // ── Mark remaining TASE symbols as stale ──
+  failedTA.forEach(sym => {
+    _staleSymbols.add(sym);
+    const row = PORTFOLIO.find(p => p.symbol === sym);
+    if (row) row._stale = true;
+  });
+
+  savePortfolioState();
+  renderAll();
+  const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const staleCount = _staleSymbols.size;
+  btn.textContent = staleCount ? `↻ ${now} (${staleCount} stale)` : `↻ ${now}`;
+  btn.disabled = false;
+}
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+function renderAll() {
+  renderCards();
+  renderTable();
+  renderCharts();
+  generateInsights();
+  generateWatchlist();
+  updateClearBtn();
+}
+
+// Boot: load portfolio from server, then render everything
+(async () => {
+  await loadPortfolioState();
+  setTableView('performance'); // init the return chart wrapper + render
+  renderAll();
+  loadMarketIndexes();
+  refreshPrices(); // auto-refresh prices on every page load / hard-refresh
+
+  // Restore auto-refresh preference
+  if (localStorage.getItem('portfolioAutoRefresh') === '1') toggleAutoRefresh();
+
+  // Restore saved cash and auto-run gap analysis if cash was previously entered
+  const _savedCash = parseFloat(localStorage.getItem('portfolioCashNIS')) || 0;
+  if (_savedCash > 0) {
+    cashNIS = _savedCash;
+    const _ci = document.getElementById('cashInput');
+    if (_ci) _ci.value = _savedCash;
+    // Small delay to ensure fxRate is loaded before computing NIS values
+    setTimeout(analyzeGaps, 800);
+  }
+})();
+</script>
+
+<!-- Trade Modal -->
+<div id="tradeOverlay" class="trade-overlay" style="display:none" onclick="if(event.target===this)closeTradeModal()">
+  <div class="trade-modal">
+    <div class="trade-modal-header">
+      <div class="trade-tabs">
+        <button class="trade-tab active buy" id="tradeTabBuy" onclick="setTradeMode('buy')">Buy</button>
+        <button class="trade-tab sell" id="tradeTabSell" onclick="setTradeMode('sell')">Sell</button>
+      </div>
+      <button class="trade-close" onclick="closeTradeModal()">✕</button>
+    </div>
+    <div class="trade-body">
+      <!-- BUY FORM -->
+      <div id="buyForm">
+        <div class="trade-field">
+          <label>Symbol</label>
+          <input type="text" id="buy-symbol" list="symbolList" placeholder="NVDA, AAPL…" autocomplete="off" oninput="onBuySymbolChange()" />
+          <datalist id="symbolList"></datalist>
+        </div>
+        <div id="buy-new-fields" style="display:none">
+          <div class="trade-field">
+            <label>Asset Name</label>
+            <input type="text" id="buy-name" placeholder="Company / ETF name" />
+          </div>
+          <div class="trade-row">
+            <div class="trade-field">
+              <label>Type</label>
+              <select id="buy-type">
+                <option value="Stock">Stock</option>
+                <option value="ETF">ETF</option>
+              </select>
+            </div>
+            <div class="trade-field">
+              <label>Exchange</label>
+              <select id="buy-exchange">
+                <option value="NASDAQ">NASDAQ</option>
+                <option value="NYSE">NYSE</option>
+                <option value="TASE">TASE</option>
+              </select>
+            </div>
+          </div>
+          <div class="trade-row">
+            <div class="trade-field">
+              <label>Country</label>
+              <select id="buy-country">
+                <option value="USA">USA</option>
+                <option value="Israel">Israel</option>
+              </select>
+            </div>
+            <div class="trade-field">
+              <label>Segment</label>
+              <select id="buy-segment">
+                <option value="US Stocks">US Stocks</option>
+                <option value="USA ETF">USA ETF</option>
+                <option value="IL">IL</option>
+                <option value="Europe">Europe</option>
+                <option value="Bitcoin">Bitcoin</option>
+              </select>
+            </div>
+          </div>
+          <div class="trade-field">
+            <label>Current Price (native currency)</label>
+            <input type="number" id="buy-current-price" min="0" step="0.01" placeholder="Market price today" />
+          </div>
+        </div>
+        <div class="trade-row">
+          <div class="trade-field">
+            <label>Date</label>
+            <input type="date" id="buy-date" />
+          </div>
+          <div class="trade-field">
+            <label>Qty</label>
+            <input type="number" id="buy-qty" min="0" step="0.001" placeholder="0" />
+          </div>
+        </div>
+        <div class="trade-row">
+          <div class="trade-field">
+            <label>Price</label>
+            <input type="number" id="buy-price" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="trade-field">
+            <label>Currency</label>
+            <select id="buy-currency">
+              <option value="USD">USD $</option>
+              <option value="NIS">NIS ₪</option>
+            </select>
+          </div>
+        </div>
+        <button class="trade-submit buy" onclick="submitBuy()">Confirm Buy</button>
+        <div class="trade-msg" id="buyMsg"></div>
+      </div>
+      <!-- SELL FORM -->
+      <div id="sellForm" style="display:none">
+        <div class="trade-field">
+          <label>Symbol</label>
+          <select id="sell-symbol" onchange="updateSellMax()"></select>
+        </div>
+        <div class="trade-field">
+          <label>Qty to Sell (<span id="sell-max-label">0</span> held)</label>
+          <input type="number" id="sell-qty" min="0" step="0.001" placeholder="0" />
+        </div>
+        <div class="trade-row">
+          <div class="trade-field">
+            <label>Date</label>
+            <input type="date" id="sell-date" />
+          </div>
+          <div class="trade-field">
+            <label>Price per Share</label>
+            <input type="number" id="sell-price" min="0" step="0.01" placeholder="0.00" />
+          </div>
+        </div>
+        <button class="trade-submit sell" onclick="submitSell()">Confirm Sell</button>
+        <div class="trade-msg" id="sellMsg"></div>
+        <div class="trade-reset">
+          <button onclick="resetPortfolio()">Reset to original data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
