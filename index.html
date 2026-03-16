@@ -3575,6 +3575,22 @@ function toggleAutoRefresh() {
 // Track which symbols were successfully refreshed (vs stale)
 const _staleSymbols = new Set();
 
+// ── CORS proxy pool (rotate through if one fails) ──
+const CORS_PROXIES = [
+  url => 'https://corsproxy.io/?' + encodeURIComponent(url),
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+];
+
+async function fetchViaCors(url, opts = {}) {
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const res = await fetch(proxy(url), { ...opts, signal: AbortSignal.timeout(8000) });
+      if (res.ok) return res;
+    } catch(_) {}
+  }
+  throw new Error('All CORS proxies failed for ' + url);
+}
+
 // Map portfolio .TA symbols → TradingView TASE: symbols
 const TV_TICKER = {
   'BEZQ.TA':    'TASE:BEZQ',
@@ -3587,8 +3603,99 @@ const TV_TICKER = {
   'INFF1.TA':   'TASE:IN.FF1',
   'iSFF702.TA': 'TASE:IS.FF702',
 };
-// Reverse map: TradingView symbol → portfolio symbol
 const TV_TICKER_REV = Object.fromEntries(Object.entries(TV_TICKER).map(([k,v]) => [v, k]));
+
+// ── Cache last known good prices in localStorage so we never show hardcoded stale values ──
+function cachePrices() {
+  const cache = {};
+  PORTFOLIO.forEach(r => { cache[r.symbol] = { price: r.currentPrice, dailyPct: r.dailyChangePct }; });
+  try { localStorage.setItem('_priceCache', JSON.stringify(cache)); } catch(_) {}
+}
+function loadCachedPrices() {
+  try {
+    const c = JSON.parse(localStorage.getItem('_priceCache') || '{}');
+    PORTFOLIO.forEach(r => {
+      if (c[r.symbol]?.price) {
+        r.currentPrice = c[r.symbol].price;
+        r.dailyChangePct = c[r.symbol].dailyPct ?? 0;
+      }
+    });
+  } catch(_) {}
+}
+// Load cached prices immediately on boot (before first refresh)
+loadCachedPrices();
+
+// ── Helper: fetch one symbol from Yahoo v8 chart ──
+async function yahooChartPrice(symbol) {
+  const ticker = YAHOO_TICKER[symbol] || symbol;
+  const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+  const res = await fetchViaCors(yUrl);
+  const json = await res.json();
+  const result = json.chart?.result?.[0];
+  const closes = result?.indicators?.adjclose?.[0]?.adjclose
+              ?? result?.indicators?.quote?.[0]?.close ?? [];
+  const valid = closes.filter(c => c != null);
+  const last = valid[valid.length - 1];
+  const prev = valid[valid.length - 2];
+  if (last == null) throw new Error('no price');
+  const price    = symbol.endsWith('.TA') ? last / 100 : last;
+  const dailyPct = prev != null ? (last - prev) / prev * 100 : 0;
+  return { price, dailyPct };
+}
+
+// ── Helper: fetch TASE symbols via TradingView scanner ──
+async function tvScannerPrices(symbols) {
+  const tvTickers = symbols.map(s => TV_TICKER[s] || ('TASE:' + s.replace('.TA', '')));
+  const scanUrl = 'https://scanner.tradingview.com/israel/scan';
+  const body = JSON.stringify({ symbols: { tickers: tvTickers }, columns: ['close', 'change'] });
+  // Try each CORS proxy for the POST
+  let tvData = null;
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const res = await fetch(proxy(scanUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) { tvData = await res.json(); break; }
+    } catch(_) {}
+  }
+  if (!tvData?.data) return {};
+  const out = {};
+  tvData.data.forEach(item => {
+    const tvSym = item.s;
+    const sym = TV_TICKER_REV[tvSym] || (tvSym.replace('TASE:', '') + '.TA');
+    const close = item.d?.[0];
+    const chg   = item.d?.[1] ?? 0;
+    if (close != null) out[sym] = { price: close / 100, dailyPct: chg };
+  });
+  return out;
+}
+
+// ── Helper: fetch TASE via allorigins /get endpoint (more reliable, wraps JSON) ──
+async function alloriginsYahooPrices(symbols) {
+  const out = {};
+  await Promise.allSettled(symbols.map(async sym => {
+    const ticker = YAHOO_TICKER[sym] || sym;
+    const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+    try {
+      const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(yUrl), { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) return;
+      const wrap = await res.json();
+      const json = JSON.parse(wrap.contents);
+      const result = json.chart?.result?.[0];
+      const closes = result?.indicators?.adjclose?.[0]?.adjclose
+                  ?? result?.indicators?.quote?.[0]?.close ?? [];
+      const valid = closes.filter(c => c != null);
+      const last = valid[valid.length - 1];
+      const prev = valid[valid.length - 2];
+      if (last == null) return;
+      out[sym] = { price: last / 100, dailyPct: prev != null ? (last - prev) / prev * 100 : 0 };
+    } catch(_) {}
+  }));
+  return out;
+}
 
 async function refreshPrices() {
   const btn = document.getElementById('refreshBtn');
@@ -3596,78 +3703,77 @@ async function refreshPrices() {
   btn.disabled = true;
   btn.textContent = '↻ Updating…';
 
-  // ── Phase 1: Yahoo Finance (works for US stocks + BEZQ.TA) ──
-  const results = await Promise.allSettled(
-    PORTFOLIO.map(r => {
-      const ticker = YAHOO_TICKER[r.symbol] || r.symbol;
-      const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
-      return fetch('https://corsproxy.io/?' + encodeURIComponent(yUrl))
-        .then(res => res.json())
-        .then(json => {
-          const result = json.chart?.result?.[0];
-          const closes = result?.indicators?.adjclose?.[0]?.adjclose
-                      ?? result?.indicators?.quote?.[0]?.close ?? [];
-          const valid = closes.filter(c => c != null);
-          const last = valid[valid.length - 1];
-          const prev = valid[valid.length - 2];
-          if (last == null) return null;
-          const price    = r.symbol.endsWith('.TA') ? last / 100 : last;
-          const dailyPct = prev != null ? (last - prev) / prev * 100 : 0;
-          return { symbol: r.symbol, price, dailyPct };
-        });
-    })
-  );
-
   let updated = 0;
-  const failedTA = [];            // TASE symbols that Yahoo couldn't fetch
-  results.forEach((res, i) => {
-    if (res.status === 'fulfilled' && res.value) {
+  const taseSymbols = PORTFOLIO.filter(r => r.symbol.endsWith('.TA')).map(r => r.symbol);
+  const globalSymbols = PORTFOLIO.filter(r => !r.symbol.endsWith('.TA'));
+
+  // ══ Phase 1: Yahoo Finance for global (US/EU) stocks — parallel ══
+  const globalResults = await Promise.allSettled(
+    globalSymbols.map(r => yahooChartPrice(r.symbol).then(p => ({ symbol: r.symbol, ...p })))
+  );
+  globalResults.forEach(res => {
+    if (res.status === 'fulfilled') {
       const { symbol, price, dailyPct } = res.value;
       const row = PORTFOLIO.find(p => p.symbol === symbol);
       if (row) { row.currentPrice = price; row.dailyChangePct = dailyPct; row._stale = false; updated++; }
       _staleSymbols.delete(symbol);
-    } else if (PORTFOLIO[i].symbol.endsWith('.TA')) {
-      failedTA.push(PORTFOLIO[i].symbol);
     }
   });
 
-  // ── Phase 2: TradingView scanner fallback for TASE symbols that failed Yahoo ──
-  if (failedTA.length) {
-    try {
-      const tvTickers = failedTA.map(s => TV_TICKER[s] || ('TASE:' + s.replace('.TA', '')));
-      const tvRes = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://scanner.tradingview.com/israel/scan'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols: { tickers: tvTickers }, columns: ['close', 'change'] })
-      });
-      const tvData = await tvRes.json();
-      (tvData.data || []).forEach(item => {
-        const tvSym = item.s;                              // e.g. "TASE:KSM.F74"
-        const sym   = TV_TICKER_REV[tvSym] || (tvSym.replace('TASE:', '') + '.TA');
-        const close = item.d?.[0];
-        const chg   = item.d?.[1] ?? 0;
-        if (close == null) return;
-        const row = PORTFOLIO.find(p => p.symbol === sym);
-        if (row) {
-          row.currentPrice   = close / 100;   // TradingView returns agorot
-          row.dailyChangePct = chg;
-          row._stale = false;
-          updated++;
-          _staleSymbols.delete(sym);
-          const idx = failedTA.indexOf(sym);
-          if (idx !== -1) failedTA.splice(idx, 1);
-        }
-      });
-    } catch(e) { /* TradingView fallback failed — stale symbols remain */ }
+  // ══ Phase 2: TASE symbols — try 3 sources in sequence ══
+  const pendingTA = new Set(taseSymbols);
+
+  // 2a: Yahoo Finance via corsproxy.io (primary)
+  if (pendingTA.size) {
+    const yahooBatch = await Promise.allSettled(
+      [...pendingTA].map(sym => yahooChartPrice(sym).then(p => ({ symbol: sym, ...p })))
+    );
+    yahooBatch.forEach(res => {
+      if (res.status === 'fulfilled') {
+        const { symbol, price, dailyPct } = res.value;
+        const row = PORTFOLIO.find(p => p.symbol === symbol);
+        if (row) { row.currentPrice = price; row.dailyChangePct = dailyPct; row._stale = false; updated++; }
+        _staleSymbols.delete(symbol);
+        pendingTA.delete(symbol);
+      }
+    });
   }
 
-  // ── Mark remaining TASE symbols as stale ──
-  failedTA.forEach(sym => {
+  // 2b: TradingView scanner fallback (handles stocks, not all ETFs)
+  if (pendingTA.size) {
+    try {
+      const tvPrices = await tvScannerPrices([...pendingTA]);
+      for (const [sym, data] of Object.entries(tvPrices)) {
+        const row = PORTFOLIO.find(p => p.symbol === sym);
+        if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
+        _staleSymbols.delete(sym);
+        pendingTA.delete(sym);
+      }
+    } catch(_) {}
+  }
+
+  // 2c: AllOrigins /get wrapper fallback (most reliable for remaining)
+  if (pendingTA.size) {
+    try {
+      const aoPrices = await alloriginsYahooPrices([...pendingTA]);
+      for (const [sym, data] of Object.entries(aoPrices)) {
+        const row = PORTFOLIO.find(p => p.symbol === sym);
+        if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
+        _staleSymbols.delete(sym);
+        pendingTA.delete(sym);
+      }
+    } catch(_) {}
+  }
+
+  // ── Mark truly unreachable symbols as stale ──
+  pendingTA.forEach(sym => {
     _staleSymbols.add(sym);
     const row = PORTFOLIO.find(p => p.symbol === sym);
     if (row) row._stale = true;
   });
 
+  // Cache all prices so next load starts with latest known values
+  cachePrices();
   savePortfolioState();
   renderAll();
   const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
