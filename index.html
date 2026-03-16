@@ -2126,8 +2126,7 @@ const MARKET_INDEXES = [
 
 async function fetchIndexQuote(ticker) {
   const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
-  const res  = await fetch('https://corsproxy.io/?' + encodeURIComponent(yUrl));
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const res  = await fetchViaCors(yUrl);
   const json = await res.json();
   const r = json.chart?.result?.[0];
   if (!r) throw new Error('no result');
@@ -2135,8 +2134,10 @@ async function fetchIndexQuote(ticker) {
   const prev = closes[closes.length - 2];
   const last = closes[closes.length - 1];
   if (last == null) throw new Error('no close');
+  // TA-125 comes in agorot from Yahoo
+  const price = ticker.endsWith('.TA') ? last / 100 : last;
   const chgPct = prev != null ? ((last - prev) / prev) * 100 : null;
-  return { price: last, chgPct };
+  return { price, chgPct };
 }
 
 function fmtIdx(val, currency) {
