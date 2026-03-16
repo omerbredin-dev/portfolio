@@ -6,6 +6,30 @@
   <title>My Portfolio</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
+    /* ── Password gate ── */
+    .pw-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #0f1117;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+    }
+    .pw-overlay.hidden { display: none; }
+    .pw-box { text-align: center; }
+    .pw-box h2 { color: #e8eaf6; font-size: 22px; margin-bottom: 8px; }
+    .pw-box p { color: #7b82a8; font-size: 13px; margin-bottom: 16px; }
+    .pw-box input {
+      background: #1a1d27; border: 1px solid #2e3350; border-radius: 8px;
+      color: #e8eaf6; padding: 10px 16px; font-size: 15px; width: 240px;
+      outline: none; text-align: center;
+    }
+    .pw-box input:focus { border-color: #5c7cfa; }
+    .pw-box button {
+      margin-left: 8px; padding: 10px 20px; background: #5c7cfa; color: #fff;
+      border: none; border-radius: 8px; font-size: 14px; cursor: pointer;
+    }
+    .pw-box .pw-err { color: #f56565; font-size: 12px; margin-top: 8px; min-height: 16px; }
+    .app-hidden { display: none !important; }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -665,6 +689,20 @@
 </head>
 <body>
 
+<!-- Password gate overlay -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <h2>🔒 My Portfolio</h2>
+    <p>Enter password to continue</p>
+    <div>
+      <input type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()" autofocus />
+      <button onclick="checkPw()">Enter</button>
+    </div>
+    <div class="pw-err" id="pwErr"></div>
+  </div>
+</div>
+
+<div id="appWrap">
 <header>
   <div class="logo">My <span>Portfolio</span></div>
   <div class="header-meta">
@@ -3792,5 +3830,40 @@ function renderAll() {
     </div>
   </div>
 </div>
+</div><!-- /appWrap -->
+
+<script>
+// Password gate — SHA-256 hash comparison
+const PW_HASH = 'ab66bd48c30449aed11791f3e78752efb223549f8cc5a9842937d19292311c88';
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+// On load: check if already authenticated this session
+(function() {
+  const appWrap = document.getElementById('appWrap');
+  const overlay = document.getElementById('pwOverlay');
+  if (sessionStorage.getItem('portfolio_auth') === '1') {
+    overlay.classList.add('hidden');
+  } else {
+    appWrap.classList.add('app-hidden');
+  }
+})();
+
+async function checkPw() {
+  const input = document.getElementById('pwInput').value;
+  const hash = await sha256(input);
+  if (hash === PW_HASH) {
+    sessionStorage.setItem('portfolio_auth', '1');
+    document.getElementById('pwOverlay').classList.add('hidden');
+    document.getElementById('appWrap').classList.remove('app-hidden');
+    document.getElementById('pwErr').textContent = '';
+  } else {
+    document.getElementById('pwErr').textContent = 'Wrong password';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+</script>
 </body>
 </html>
