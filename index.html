@@ -2116,28 +2116,47 @@ function renderTopHoldings() {
 // Market Indexes
 // ─────────────────────────────────────────────
 const MARKET_INDEXES = [
-  { ticker: '^GSPC',    name: 'S&P 500',    currency: 'USD' },
-  { ticker: '^IXIC',    name: 'Nasdaq',     currency: 'USD' },
-  { ticker: '^GDAXI',   name: 'DAX',        currency: 'EUR' },
-  { ticker: '^STOXX50E',name: 'STOXX 50',   currency: 'EUR' },
-  { ticker: '^TA125.TA',name: 'TA-125',     currency: 'ILS' },
-  { ticker: 'BTC-USD',  name: 'Bitcoin',    currency: 'USD' },
+  { tv: 'SP:SPX',           name: 'S&P 500',  currency: 'USD' },
+  { tv: 'NASDAQ:NDX',       name: 'Nasdaq',    currency: 'USD' },
+  { tv: 'XETR:DAX',         name: 'DAX',       currency: 'EUR' },
+  { tv: 'TVC:SX5E',         name: 'STOXX 50',  currency: 'EUR' },
+  { tv: 'TASE:TA125',       name: 'TA-125',    currency: 'ILS' },
+  { tv: 'BITSTAMP:BTCUSD',  name: 'Bitcoin',   currency: 'USD' },
 ];
 
-async function fetchIndexQuote(ticker) {
-  const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
-  const res  = await fetchViaCors(yUrl);
-  const json = await res.json();
-  const r = json.chart?.result?.[0];
-  if (!r) throw new Error('no result');
-  const closes = r.indicators.quote?.[0]?.close ?? [];
-  const prev = closes[closes.length - 2];
-  const last = closes[closes.length - 1];
-  if (last == null) throw new Error('no close');
-  // TA-125 comes in agorot from Yahoo
-  const price = ticker.endsWith('.TA') ? last / 100 : last;
-  const chgPct = prev != null ? ((last - prev) / prev) * 100 : null;
-  return { price, chgPct };
+async function fetchAllIndexQuotes() {
+  const tickers = MARKET_INDEXES.map(i => i.tv);
+  const scanUrl = 'https://scanner.tradingview.com/global/scan';
+  const body = JSON.stringify({ symbols: { tickers }, columns: ['close', 'change'] });
+  let tvData = null;
+
+  // Same multi-strategy as TASE prices
+  for (const ct of ['text/plain', 'application/json']) {
+    if (tvData) break;
+    try {
+      const res = await fetchWithTimeout(
+        'https://corsproxy.io/?' + encodeURIComponent(scanUrl),
+        { method: 'POST', headers: { 'Content-Type': ct }, body },
+        12000
+      );
+      if (res.ok) tvData = await res.json();
+    } catch(_) {}
+  }
+  if (!tvData) {
+    try {
+      const res = await fetchWithTimeout(scanUrl,
+        { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body },
+        10000
+      );
+      if (res.ok) tvData = await res.json();
+    } catch(_) {}
+  }
+
+  const map = {};
+  (tvData?.data || []).forEach(item => {
+    map[item.s] = { price: item.d?.[0], chgPct: item.d?.[1] ?? 0 };
+  });
+  return map;
 }
 
 function fmtIdx(val, currency) {
@@ -3100,24 +3119,30 @@ function sortGapTable(col) {
 async function loadMarketIndexes() {
   const el = document.getElementById('marketIndexes');
   if (!el) return;
-  const results = await Promise.allSettled(MARKET_INDEXES.map(idx =>
-    fetchIndexQuote(idx.ticker).then(q => ({ ...idx, ...q }))
-  ));
-  marketIndexData = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-  el.innerHTML = results.map(r => {
-    if (r.status !== 'fulfilled') {
-      return `<div class="idx-row"><span class="idx-name">${r.reason?.ticker || '—'}</span><span class="idx-loading">—</span></div>`;
-    }
-    const d = r.value;
-    const sign = d.chgPct >= 0 ? '+' : '';
-    const cls  = d.chgPct >= 0 ? 'pos' : 'neg';
-    return `<div class="idx-row">
-      <span class="idx-name">${d.name}</span>
-      <span class="idx-price">${fmtIdx(d.price, d.currency)}</span>
-      <span class="idx-chg ${cls}">${d.chgPct != null ? sign + d.chgPct.toFixed(2) + '%' : '—'}</span>
-    </div>`;
-  }).join('');
-  generateInsights(); // re-run with live index context
+  try {
+    const quotes = await fetchAllIndexQuotes();
+    marketIndexData = MARKET_INDEXES.filter(idx => quotes[idx.tv]).map(idx => ({
+      ...idx, price: quotes[idx.tv].price, chgPct: quotes[idx.tv].chgPct
+    }));
+    el.innerHTML = MARKET_INDEXES.map(idx => {
+      const q = quotes[idx.tv];
+      if (!q || q.price == null) {
+        return `<div class="idx-row"><span class="idx-name">${idx.name}</span><span class="idx-loading">—</span></div>`;
+      }
+      const sign = q.chgPct >= 0 ? '+' : '';
+      const cls  = q.chgPct >= 0 ? 'pos' : 'neg';
+      return `<div class="idx-row">
+        <span class="idx-name">${idx.name}</span>
+        <span class="idx-price">${fmtIdx(q.price, idx.currency)}</span>
+        <span class="idx-chg ${cls}">${sign}${q.chgPct.toFixed(2)}%</span>
+      </div>`;
+    }).join('');
+    generateInsights();
+  } catch(_) {
+    el.innerHTML = MARKET_INDEXES.map(idx =>
+      `<div class="idx-row"><span class="idx-name">${idx.name}</span><span class="idx-loading">—</span></div>`
+    ).join('');
+  }
 }
 
 // ─────────────────────────────────────────────
