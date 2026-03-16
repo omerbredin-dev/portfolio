@@ -3655,18 +3655,28 @@ async function tvScannerPrices(symbols) {
   const tvTickers = symbols.map(s => TV_TICKER[s] || ('TASE:' + s.replace('.TA', '')));
   const scanUrl = 'https://scanner.tradingview.com/israel/scan';
   const body = JSON.stringify({ symbols: { tickers: tvTickers }, columns: ['close', 'change'] });
-  // Try each CORS proxy for the POST
   let tvData = null;
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const res = await fetchWithTimeout(proxy(scanUrl), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      }, 10000);
-      if (res.ok) { tvData = await res.json(); break; }
-    } catch(_) {}
+
+  // Try 1: direct fetch (works if TradingView allows CORS from this origin)
+  try {
+    const res = await fetchWithTimeout(scanUrl, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+    }, 10000);
+    if (res.ok) tvData = await res.json();
+  } catch(_) {}
+
+  // Try 2: via each CORS proxy
+  if (!tvData) {
+    for (const proxy of CORS_PROXIES) {
+      try {
+        const res = await fetchWithTimeout(proxy(scanUrl), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+        }, 10000);
+        if (res.ok) { tvData = await res.json(); break; }
+      } catch(_) {}
+    }
   }
+
   if (!tvData?.data) return {};
   const out = {};
   tvData.data.forEach(item => {
@@ -3726,49 +3736,30 @@ async function refreshPrices() {
     }
   });
 
-  // ══ Phase 2: TASE symbols — try 3 sources in sequence ══
-  const pendingTA = new Set(taseSymbols);
-
-  // 2a: Yahoo Finance via corsproxy.io (primary)
-  if (pendingTA.size) {
-    const yahooBatch = await Promise.allSettled(
-      [...pendingTA].map(sym => yahooChartPrice(sym).then(p => ({ symbol: sym, ...p })))
-    );
-    yahooBatch.forEach(res => {
-      if (res.status === 'fulfilled') {
-        const { symbol, price, dailyPct } = res.value;
-        const row = PORTFOLIO.find(p => p.symbol === symbol);
-        if (row) { row.currentPrice = price; row.dailyChangePct = dailyPct; row._stale = false; updated++; }
-        _staleSymbols.delete(symbol);
-        pendingTA.delete(symbol);
-      }
-    });
-  }
-
-  // 2b: TradingView scanner fallback (handles stocks, not all ETFs)
-  if (pendingTA.size) {
+  // ══ Phase 2: ALL TASE symbols via TradingView ONLY (Yahoo doesn't have IL ETFs) ══
+  if (taseSymbols.length) {
     try {
-      const tvPrices = await tvScannerPrices([...pendingTA]);
-      for (const [sym, data] of Object.entries(tvPrices)) {
-        const row = PORTFOLIO.find(p => p.symbol === sym);
-        if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
-        _staleSymbols.delete(sym);
-        pendingTA.delete(sym);
+      const tvPrices = await tvScannerPrices(taseSymbols);
+      for (const sym of taseSymbols) {
+        const data = tvPrices[sym];
+        if (data) {
+          const row = PORTFOLIO.find(p => p.symbol === sym);
+          if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
+          _staleSymbols.delete(sym);
+        } else {
+          _staleSymbols.add(sym);
+          const row = PORTFOLIO.find(p => p.symbol === sym);
+          if (row) row._stale = true;
+        }
       }
-    } catch(_) {}
-  }
-
-  // 2c: AllOrigins /get wrapper fallback (most reliable for remaining)
-  if (pendingTA.size) {
-    try {
-      const aoPrices = await alloriginsYahooPrices([...pendingTA]);
-      for (const [sym, data] of Object.entries(aoPrices)) {
+    } catch(_) {
+      // TradingView completely failed — mark all TASE as stale
+      taseSymbols.forEach(sym => {
+        _staleSymbols.add(sym);
         const row = PORTFOLIO.find(p => p.symbol === sym);
-        if (row) { row.currentPrice = data.price; row.dailyChangePct = data.dailyPct; row._stale = false; updated++; }
-        _staleSymbols.delete(sym);
-        pendingTA.delete(sym);
-      }
-    } catch(_) {}
+        if (row) row._stale = true;
+      });
+    }
   }
 
   // ── Mark truly unreachable symbols as stale ──
