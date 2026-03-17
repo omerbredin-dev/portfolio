@@ -1976,9 +1976,7 @@ function renderReturnChart() {
     series = [{ date: cutoff, cumCost: base.cumCost, cumValue: base.cumValue, isPurchase: false }, ...after];
   }
 
-  // ── KPIs — Modified Dietz return (eliminates impact of new cash flows) ──
-  // R = (EMV - BMV - CF) / (BMV + Σ(CF_i × W_i))
-  // W_i = fraction of period remaining when cash flow occurred
+  // ── KPIs — Simple return (matches header cards) ──
   const todayRow   = all.reduce((a, r) => ({ cost: a.cost + r.cost, val: a.val + r.marketValue }), { cost: 0, val: 0 });
   const todayCost  = todayRow.cost;
   const todayValue = todayRow.val;
@@ -1988,52 +1986,49 @@ function renderReturnChart() {
   const pctLbl     = document.getElementById('rs-pct-label');
   document.getElementById('rs-value').textContent = fmt(todayValue);
 
-  const startVal  = isAll ? 0 : series[0].cumValue;
-  const startDate = isAll ? series[0].date : series[0].date;
-  const startMs   = startDate.getTime();
-  const endMs     = now.getTime();
-  const spanDays  = Math.max(1, (endMs - startMs) / 86400000);
-
-  // Sum cash flows (purchases) during the period, time-weighted
-  let totalCF = 0, weightedCF = 0;
-  Object.entries(PURCHASE_HISTORY).forEach(([sym, lots]) => {
-    lots.forEach(lot => {
-      const [d, m, y] = lot.date.split('/').map(Number);
-      const lotMs = new Date(y, m-1, d).getTime();
-      if (lotMs > startMs && lotMs <= endMs) {
-        const cf = toDisplay(lot.qty * lot.price, lot.currency);
-        const daysUsed = (lotMs - startMs) / 86400000;
-        const w = (spanDays - daysUsed) / spanDays; // fraction of period remaining
-        totalCF    += cf;
-        weightedCF += cf * w;
-      }
-    });
-  });
-
-  const denom  = startVal + weightedCF;
-  const mdGain = todayValue - startVal - totalCF;          // actual gain net of new money
-  const mdPct  = denom > 0 ? mdGain / denom * 100 : 0;    // Modified Dietz %
-
-  // TWR — only available once historical prices are loaded
-  const twrRaw = (returnMethod === 'twr') ? computeTWR(startMs, endMs) : null;
-  const showPct = (returnMethod === 'twr' && twrRaw != null) ? twrRaw * 100 : mdPct;
-  const methodSuffix = returnMethod === 'twr' ? (twrRaw != null ? ' TWR' : ' Dietz*') : ' Dietz';
+  const startVal  = isAll ? 0 : series[0]?.cumValue || 0;
 
   if (isAll) {
+    // Simple return: gain = value - cost, pct = gain/cost
+    const gain = todayValue - todayCost;
+    const pct  = todayCost > 0 ? (gain / todayCost) * 100 : 0;
     if (costLbl) costLbl.textContent = 'Cost Invested';
     document.getElementById('rs-cost').textContent = fmt(todayCost);
+    if (retLbl) retLbl.textContent = 'Total Return';
+    const retEl = document.getElementById('rs-return');
+    retEl.textContent = (gain >= 0 ? '+' : '') + fmt(gain);
+    retEl.className   = 'return-stat-value ' + (gain >= 0 ? 'up' : 'down');
+    if (pctLbl) pctLbl.textContent = 'Return %';
+    const pctEl = document.getElementById('rs-pct');
+    pctEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+    pctEl.className   = 'return-stat-value ' + (pct >= 0 ? 'up' : 'down');
   } else {
+    // Period return: gain = current value - start value - new cash added
+    const startMs = series[0]?.date?.getTime() || 0;
+    const endMs   = now.getTime();
+    let newCash = 0;
+    Object.entries(PURCHASE_HISTORY).forEach(([sym, lots]) => {
+      lots.forEach(lot => {
+        const [d, m, y] = lot.date.split('/').map(Number);
+        const lotMs = new Date(y, m-1, d).getTime();
+        if (lotMs >= startMs && lotMs <= endMs) {
+          newCash += toDisplay(lot.qty * lot.price, lot.currency);
+        }
+      });
+    });
+    const periodGain = todayValue - startVal - newCash;
+    const periodPct  = startVal > 0 ? (periodGain / startVal) * 100 : 0;
     if (costLbl) costLbl.textContent = 'Start Value';
     document.getElementById('rs-cost').textContent = fmt(startVal);
+    if (retLbl) retLbl.textContent = 'Period Return';
+    const retEl = document.getElementById('rs-return');
+    retEl.textContent = (periodGain >= 0 ? '+' : '') + fmt(periodGain);
+    retEl.className   = 'return-stat-value ' + (periodGain >= 0 ? 'up' : 'down');
+    if (pctLbl) pctLbl.textContent = 'Period %';
+    const pctEl = document.getElementById('rs-pct');
+    pctEl.textContent = (periodPct >= 0 ? '+' : '') + periodPct.toFixed(1) + '%';
+    pctEl.className   = 'return-stat-value ' + (periodPct >= 0 ? 'up' : 'down');
   }
-  if (retLbl) retLbl.textContent = isAll ? 'Total Return' : 'Period Return';
-  const retEl = document.getElementById('rs-return');
-  retEl.textContent = (mdGain >= 0 ? '+' : '') + fmt(mdGain);
-  retEl.className   = 'return-stat-value ' + (mdGain >= 0 ? 'up' : 'down');
-  if (pctLbl) pctLbl.textContent = (isAll ? 'Return %' : 'Period %') + methodSuffix;
-  const pctEl = document.getElementById('rs-pct');
-  pctEl.textContent = (showPct >= 0 ? '+' : '') + showPct.toFixed(1) + '%';
-  pctEl.className   = 'return-stat-value ' + (showPct >= 0 ? 'up' : 'down');
 
   // ── Chart ──
   const labels    = series.map(p => {
