@@ -107,6 +107,78 @@ def fetch_indexes():
     return out
 
 
+def fetch_historical_prices():
+    """Fetch monthly historical prices for all symbols (for the return chart).
+    Yahoo Finance for global symbols, TradingView for TASE.
+    Returns { symbol: [ {ms, price}, ... ] }
+    """
+    history = {}
+    # Earliest date: Jan 2022 (covers user's full history)
+    p1 = int(datetime(2022, 1, 1).timestamp())
+    p2 = int(datetime.now().timestamp())
+
+    # Global symbols via Yahoo monthly chart
+    for sym in GLOBAL_SYMBOLS:
+        try:
+            ticker = YAHOO_TICKER.get(sym, sym)
+            url = (f'https://query2.finance.yahoo.com/v8/finance/chart/'
+                   f'{urllib.request.quote(ticker)}?interval=1mo&period1={p1}&period2={p2}')
+            data = fetch_json(url, timeout=20)
+            result = data.get('chart', {}).get('result', [{}])[0]
+            timestamps = result.get('timestamp', [])
+            closes = (result.get('indicators', {}).get('adjclose', [{}])[0].get('adjclose')
+                     or result.get('indicators', {}).get('quote', [{}])[0].get('close', []))
+            pts = []
+            for i, ts in enumerate(timestamps):
+                c = closes[i] if i < len(closes) else None
+                if c is not None:
+                    pts.append({'ms': ts * 1000, 'price': c})
+            if pts:
+                # Filter outliers (>5x from neighbors)
+                filtered = []
+                for i, p in enumerate(pts):
+                    prev_p = pts[i-1]['price'] if i > 0 else None
+                    next_p = pts[i+1]['price'] if i < len(pts)-1 else None
+                    ref = prev_p or next_p
+                    if ref is None or (p['price'] >= ref / 5 and p['price'] <= ref * 5):
+                        filtered.append(p)
+                history[sym] = filtered
+        except Exception as e:
+            print(f'  WARN history {sym}: {e}', file=sys.stderr)
+
+    # TASE symbols via Yahoo (only BEZQ.TA works, others won't)
+    for sym in TASE_SYMBOLS:
+        try:
+            ticker = sym  # e.g. KSMF74.TA
+            url = (f'https://query2.finance.yahoo.com/v8/finance/chart/'
+                   f'{urllib.request.quote(ticker)}?interval=1mo&period1={p1}&period2={p2}')
+            data = fetch_json(url, timeout=20)
+            result = data.get('chart', {}).get('result', [{}])[0]
+            timestamps = result.get('timestamp', [])
+            closes = (result.get('indicators', {}).get('adjclose', [{}])[0].get('adjclose')
+                     or result.get('indicators', {}).get('quote', [{}])[0].get('close', []))
+            pts = []
+            for i, ts in enumerate(timestamps):
+                c = closes[i] if i < len(closes) else None
+                if c is not None:
+                    # TASE prices from Yahoo are in agorot, convert to NIS
+                    pts.append({'ms': ts * 1000, 'price': c / 100})
+            if pts:
+                filtered = []
+                for i, p in enumerate(pts):
+                    prev_p = pts[i-1]['price'] if i > 0 else None
+                    next_p = pts[i+1]['price'] if i < len(pts)-1 else None
+                    ref = prev_p or next_p
+                    if ref is None or (p['price'] >= ref / 5 and p['price'] <= ref * 5):
+                        filtered.append(p)
+                history[sym] = filtered
+        except Exception as e:
+            # Expected for most TASE ETFs (Yahoo doesn't have them)
+            pass
+
+    return history
+
+
 def fetch_fx_rate():
     """Fetch USD/ILS rate from open.er-api.com."""
     try:
@@ -157,12 +229,22 @@ def main():
         errors.append('FX rate unavailable')
         print('  FX ERROR: unavailable', file=sys.stderr)
 
+    # Fetch historical prices (for return chart)
+    history = {}
+    try:
+        history = fetch_historical_prices()
+        print(f'  Historical: {len(history)} symbols with data', file=sys.stderr)
+    except Exception as e:
+        errors.append(f'Historical: {e}')
+        print(f'  Historical ERROR: {e}', file=sys.stderr)
+
     # Write output
     output = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'prices': prices,
         'indexes': indexes,
         'fx': {'USDILS': fx} if fx else {},
+        'history': history,
         'errors': errors,
     }
 

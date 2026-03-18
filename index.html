@@ -3898,6 +3898,26 @@ async function loadPricesJson() {
       btn.textContent = staleCount ? `↻ ${timeStr} (${staleCount} stale)` : `↻ ${timeStr}`;
     }
 
+    // Apply historical prices for return chart
+    if (data.history && Object.keys(data.history).length) {
+      for (const [sym, pts] of Object.entries(data.history)) {
+        if (Array.isArray(pts) && pts.length) {
+          historicalPrices[sym] = pts;
+        }
+      }
+      const loaded = Object.keys(historicalPrices).length;
+      historicalReady = true;
+      historicalLoading = false;
+      console.log('[prices.json] Historical: ' + loaded + ' symbols');
+      const titleEl = document.querySelector('.return-panel-title');
+      if (titleEl) {
+        const total = PORTFOLIO.length;
+        titleEl.textContent = loaded === total
+          ? 'Portfolio Return Over Time  ·  Real prices'
+          : `Portfolio Return Over Time  ·  Real prices (${loaded}/${total} symbols)`;
+      }
+    }
+
     cachePrices();
     console.log('[prices.json] Applied ' + applied + ' prices');
     return applied > 0;
