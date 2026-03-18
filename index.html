@@ -3821,32 +3821,67 @@ function onBuySymbolKey(event) {
   if (event.key === 'Escape') {
     document.getElementById('buy-search-results').style.display = 'none';
   }
+  // Enter key: if no result selected, use typed symbol as-is (manual entry)
+  if (event.key === 'Enter' && !_symSearchSelected) {
+    event.preventDefault();
+    const sym = document.getElementById('buy-symbol').value.trim().toUpperCase();
+    if (!sym) return;
+    const existing = PORTFOLIO.find(r => r.symbol === sym);
+    if (existing) {
+      const cur = existing.exchange === 'TASE' ? 'NIS' : 'USD';
+      selectBuySymbol(sym, existing.name, existing.exchange, existing.type, existing.country, existing.segment, existing.currentPrice, cur);
+    } else {
+      // Manual new symbol — use sensible defaults
+      const isTASE = sym.endsWith('.TA');
+      selectBuySymbol(sym, sym, isTASE ? 'TASE' : 'NASDAQ', 'Stock', isTASE ? 'Israel' : 'USA', isTASE ? 'IL' : 'US Stocks', 0, isTASE ? 'NIS' : 'USD');
+    }
+  }
 }
 
 async function searchSymbolWeb(query) {
   const results = document.getElementById('buy-search-results');
   try {
-    const url = `https://corsproxy.io/?url=${encodeURIComponent('https://query1.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(query) + '&quotesCount=8&newsCount=0')}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    const quotes = (data.quotes || []).filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF');
+    // Try multiple CORS proxies for reliability
+    const yahooUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0`;
+    let data = null;
+    const proxies = [
+      url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    ];
+    for (const proxy of proxies) {
+      try {
+        const resp = await fetch(proxy(yahooUrl), { signal: AbortSignal.timeout(4000) });
+        if (resp.ok) { data = await resp.json(); break; }
+      } catch (_) { /* try next proxy */ }
+    }
 
     // Remove loading indicator
     const loading = document.getElementById('sym-web-loading');
     if (loading) loading.remove();
 
-    // Keep portfolio matches at top
-    const existing = new Set(PORTFOLIO.map(r => r.symbol));
-    const webItems = quotes.filter(q => !existing.has(q.symbol)).slice(0, 6);
-
-    if (!webItems.length) {
-      if (!results.children.length) {
-        results.innerHTML = '<div class="sym-search-loading">No results found</div>';
+    if (!data || !data.quotes) {
+      if (!results.querySelectorAll('.sym-search-item').length) {
+        results.innerHTML = '<div class="sym-search-loading">Search unavailable — type exact symbol and press Enter</div>';
+        results.style.display = '';
       }
       return;
     }
 
-    // Append web results
+    const quotes = data.quotes.filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF');
+
+    // Keep portfolio matches at top, show both existing & new from web
+    const existing = new Set(PORTFOLIO.map(r => r.symbol));
+    const webItems = quotes.filter(q => !existing.has(q.symbol)).slice(0, 6);
+
+    if (!webItems.length) {
+      if (!results.querySelectorAll('.sym-search-item').length) {
+        results.innerHTML = '<div class="sym-search-loading">No results found</div>';
+        results.style.display = '';
+      }
+      return;
+    }
+
+    // Build web result items
     const html = webItems.map(q => {
       const sym = q.symbol;
       const name = (q.shortname || q.longname || sym).replace(/'/g, "\\'");
@@ -3880,7 +3915,8 @@ async function searchSymbolWeb(query) {
 
   } catch (e) {
     const loading = document.getElementById('sym-web-loading');
-    if (loading) loading.textContent = 'Search unavailable — type symbol manually';
+    if (loading) loading.textContent = 'Search unavailable — type exact symbol';
+    results.style.display = '';
   }
 }
 
