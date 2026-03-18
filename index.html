@@ -3472,15 +3472,20 @@ document.getElementById('tableBody').addEventListener('click', e => {
 const SYNC_BLOB_ID = '019d014a-f8e8-7f08-a090-a45534cce072';
 const SYNC_URL = `https://jsonblob.com/api/jsonBlob/${SYNC_BLOB_ID}`;
 
+// Bump this whenever hardcoded PORTFOLIO / PURCHASE_HISTORY is edited in code.
+// Saved data with an older version is discarded to prevent stale overwrites.
+const HARDCODED_VERSION = 2;  // v2: added 15x KSMF74.TA @ 411 NIS
+
 function savePortfolioState() {
-  // Build the payload with only trade-relevant fields for known symbols,
-  // but full data for symbols added via Trade
+  // Only save TRADE-ADDED changes (symbols or qty/cost diffs from hardcoded)
+  // so that hardcoded updates are never overwritten by stale saved data.
   const tradeData = PORTFOLIO.map(r => ({
     symbol: r.symbol, name: r.name, type: r.type,
     exchange: r.exchange, country: r.country, segment: r.segment,
     qty: r.qty, avgCost: r.avgCost, avgCostCurrency: r.avgCostCurrency,
   }));
   const payload = {
+    v: HARDCODED_VERSION,
     portfolio: tradeData,
     purchaseHistory: PURCHASE_HISTORY,
     sellHistory: SELL_HISTORY,
@@ -3497,10 +3502,7 @@ function savePortfolioState() {
 
   // Also save to localStorage (offline fallback)
   try {
-    localStorage.setItem('portfolioData', JSON.stringify(PORTFOLIO));
-    localStorage.setItem('purchaseHistoryData', JSON.stringify(PURCHASE_HISTORY));
-    localStorage.setItem('sellHistoryData', JSON.stringify(SELL_HISTORY));
-    localStorage.setItem('portfolioSavedAt', payload.savedAt);
+    localStorage.setItem('portfolioState', JSON.stringify(payload));
   } catch(e) {}
 }
 
@@ -3531,15 +3533,23 @@ function _mergePortfolioData(saved, savedHistory, savedSellHistory) {
 }
 
 async function loadPortfolioState() {
+  // Clear any legacy localStorage keys from old format
+  localStorage.removeItem('portfolioData');
+  localStorage.removeItem('purchaseHistoryData');
+  localStorage.removeItem('sellHistoryData');
+  localStorage.removeItem('portfolioSavedAt');
+
   // Try cloud first (single source of truth for all devices)
   let cloudData = null;
   try {
     const res = await fetch(SYNC_URL, { headers: { 'Accept': 'application/json' } });
     if (res.ok) {
       const data = await res.json();
-      if (data.portfolio) {
+      if (data.portfolio && data.v === HARDCODED_VERSION) {
         cloudData = data;
-        console.log('[sync] loaded from cloud, saved:', data.savedAt);
+        console.log('[sync] loaded from cloud, v:', data.v, 'saved:', data.savedAt);
+      } else if (data.portfolio) {
+        console.log('[sync] cloud data is stale (v' + (data.v||'?') + ' vs v' + HARDCODED_VERSION + '), discarding');
       }
     }
   } catch(e) { console.warn('[sync] cloud load failed:', e); }
@@ -3547,18 +3557,19 @@ async function loadPortfolioState() {
   // Also check localStorage
   let localData = null;
   try {
-    const pd = localStorage.getItem('portfolioData');
-    if (pd) {
-      localData = {
-        portfolio: JSON.parse(pd),
-        purchaseHistory: JSON.parse(localStorage.getItem('purchaseHistoryData') || 'null'),
-        sellHistory: JSON.parse(localStorage.getItem('sellHistoryData') || 'null'),
-        savedAt: localStorage.getItem('portfolioSavedAt') || '2000-01-01',
-      };
+    const raw = localStorage.getItem('portfolioState');
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.portfolio && data.v === HARDCODED_VERSION) {
+        localData = data;
+      } else {
+        console.log('[sync] local data is stale, discarding');
+        localStorage.removeItem('portfolioState');
+      }
     }
   } catch(e) {}
 
-  // Use whichever is newer (cloud wins by default, local wins if newer)
+  // Use whichever is newer
   let best = null;
   if (cloudData && localData) {
     best = (cloudData.savedAt >= (localData.savedAt || '')) ? cloudData : localData;
@@ -3568,10 +3579,13 @@ async function loadPortfolioState() {
 
   if (best?.portfolio) {
     _mergePortfolioData(best.portfolio, best.purchaseHistory, best.sellHistory);
+    console.log('[sync] merged', best === cloudData ? 'cloud' : 'local', 'data');
     // If local was newer, push it to cloud for other devices
     if (best === localData && cloudData) {
       savePortfolioState();
     }
+  } else {
+    console.log('[sync] using hardcoded data (no saved state or stale)');
   }
 }
 
@@ -3586,10 +3600,7 @@ async function resetPortfolio() {
     });
   } catch(_) {}
   // Clear local data
-  localStorage.removeItem('portfolioData');
-  localStorage.removeItem('purchaseHistoryData');
-  localStorage.removeItem('sellHistoryData');
-  localStorage.removeItem('portfolioSavedAt');
+  localStorage.removeItem('portfolioState');
   location.reload();
 }
 
