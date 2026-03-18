@@ -3112,14 +3112,23 @@ function renderHeatmap() {
 
   const colorLabels = { daily: "Today", total: 'Total', '1y': '1Y', '3y': '3Y' };
 
-  // Region rectangle dimensions (px) — these define the treemap containers
-  // Regions are positioned geographically, sizes proportional to their portfolio weight
-  const REGION_RECTS = {
-    usa:     { left: '1%',  top: '7%',  w: 500, h: 380 },
-    europe:  { left: '53%', top: '3%',  w: 260, h: 160 },
-    israel:  { left: '55%', top: '38%', w: 230, h: 160 },
-    bitcoin: { left: '55%', top: '82%', w: 100, h: 60 },
+  // Region rectangle dimensions — areas proportional to portfolio weight
+  // Total map area budget: ~250,000 px²  (fits inside 1000×520 map)
+  const TOTAL_AREA = 250000;
+  const REGION_SHAPES = {
+    usa:     { left: '1%',  top: '7%',  ratio: 1.35 },   // w/h ratio
+    europe:  { left: '53%', top: '3%',  ratio: 1.6 },
+    israel:  { left: '55%', top: '38%', ratio: 1.45 },
+    bitcoin: { left: '55%', top: '82%', ratio: 1.6 },
   };
+  const REGION_RECTS = {};
+  for (const [key, shape] of Object.entries(REGION_SHAPES)) {
+    const pct = regionTotals[key] / totalValue;
+    const area = Math.max(pct * TOTAL_AREA, 1800); // min 1800px² so tiny regions stay visible
+    const h = Math.round(Math.sqrt(area / shape.ratio));
+    const w = Math.round(h * shape.ratio);
+    REGION_RECTS[key] = { left: shape.left, top: shape.top, w, h };
+  }
 
   // Build region HTML with treemap inside
   function buildRegion(key) {
