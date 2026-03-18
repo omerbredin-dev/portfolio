@@ -2996,19 +2996,20 @@ function renderHeatmap() {
       const isIlEtf = item.exchange === 'TASE' && item.type === 'ETF';
       const label = isIlEtf ? item.name.replace(/ ETF| \(IL\)/g, '') : item.symbol.replace('.TA', '');
       const weight = item.marketValue / totalValue;
-      const base = Math.sqrt(weight) * 520;
-      const size = Math.max(44, Math.min(100, base));
+      // Linear scaling — size truly reflects holding weight
+      const size = Math.max(34, Math.min(110, weight * 1100));
       const idx = _hmData.length;
       _hmData.push({ symbol: item.symbol.replace('.TA',''), name: item.name, value: item.marketValue,
                       pct: weight * 100, gainPct: item.gainPct,
                       dailyChangePct: item.dailyChangePct || 0, seg: item.segment, _row: item });
 
-      const fontSize = isIlEtf ? Math.min(10, Math.max(7, Math.floor(size/8))) : (size > 75 ? 13 : size > 58 ? 11 : 9);
-      const pctSize = size > 75 ? 11 : size > 58 ? 9 : 8;
+      const fontSize = isIlEtf ? Math.min(10, Math.max(6, Math.floor(size/8))) : (size > 80 ? 13 : size > 55 ? 11 : size > 40 ? 9 : 7);
+      const pctSize = size > 80 ? 11 : size > 55 ? 9 : size > 40 ? 8 : 7;
+      const showPct = size >= 38;
       return `<div class="wm-tile" style="background:${bg};width:${size.toFixed(0)}px;height:${size.toFixed(0)}px"
                    data-idx="${idx}" onmouseenter="hmOver(this,event)" onmousemove="hmMove(event)" onmouseleave="hmOut()">
         <div class="wm-sym" style="font-size:${fontSize}px">${label}</div>
-        <div class="wm-pct" style="font-size:${pctSize}px">${sign}${pct.toFixed(wmColorMode === 'daily' ? 2 : 1)}%</div>
+        ${showPct ? `<div class="wm-pct" style="font-size:${pctSize}px">${sign}${pct.toFixed(wmColorMode === 'daily' ? 2 : 1)}%</div>` : ''}
       </div>`;
     }).join('');
   }
