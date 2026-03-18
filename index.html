@@ -819,6 +819,133 @@
     .trade-reset { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
     .trade-reset button { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
     .trade-reset button:hover { color: var(--red); }
+
+    /* ── AI Chat panel ── */
+    .chat-btn {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none; border-radius: 8px; padding: 7px 14px;
+      font-size: 12px; font-weight: 700; color: #fff;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .chat-btn:hover { opacity: .85; }
+    .chat-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      z-index: 1001; opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+    }
+    .chat-backdrop.open { opacity: 1; pointer-events: auto; }
+    .chat-panel {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: 420px; max-width: 100vw;
+      background: var(--bg); border-left: 1px solid var(--border);
+      z-index: 1002; display: flex; flex-direction: column;
+      transform: translateX(100%); transition: transform .3s ease;
+      box-shadow: -8px 0 30px rgba(0,0,0,.3);
+    }
+    .chat-panel.open { transform: translateX(0); }
+    .chat-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .chat-header-title {
+      font-size: 14px; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chat-header-title span { font-size: 16px; }
+    .chat-header-actions { display: flex; gap: 6px; align-items: center; }
+    .chat-header-actions button {
+      background: none; border: none; color: var(--muted);
+      font-size: 12px; cursor: pointer; padding: 4px 8px;
+      border-radius: 4px; transition: all .15s;
+    }
+    .chat-header-actions button:hover { color: var(--text); background: var(--surface2); }
+    .chat-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 18px; cursor: pointer; padding: 2px 6px;
+      border-radius: 4px; transition: color .15s; line-height: 1;
+    }
+    .chat-close:hover { color: var(--text); }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .chat-msg {
+      max-width: 88%; padding: 10px 14px;
+      font-size: 13px; line-height: 1.6; word-wrap: break-word;
+    }
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--accent); color: #fff;
+      border-radius: 14px 14px 4px 14px;
+    }
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: var(--surface); color: var(--text);
+      border-radius: 14px 14px 14px 4px;
+      border: 1px solid var(--border);
+    }
+    .chat-msg.assistant strong { color: var(--text); }
+    .chat-msg.assistant code {
+      background: var(--surface2); padding: 1px 5px; border-radius: 4px;
+      font-size: 12px; color: #e2e8f0;
+    }
+    .chat-msg.system {
+      align-self: center; text-align: center;
+      color: var(--muted); font-size: 12px;
+      padding: 8px; max-width: 100%;
+    }
+    .chat-typing {
+      display: inline-flex; gap: 4px; padding: 4px 0;
+    }
+    .chat-typing span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--muted); animation: chatDot 1.2s infinite;
+    }
+    .chat-typing span:nth-child(2) { animation-delay: .2s; }
+    .chat-typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes chatDot { 0%,60%,100% { opacity:.3; transform:translateY(0) } 30% { opacity:1; transform:translateY(-4px) } }
+    .chat-input-area {
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      background: var(--surface); display: flex; gap: 8px; align-items: flex-end;
+    }
+    .chat-input-area textarea {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; color: var(--text);
+      font-size: 13px; resize: none; outline: none;
+      font-family: inherit; min-height: 40px; max-height: 120px;
+      transition: border-color .2s; line-height: 1.4;
+    }
+    .chat-input-area textarea:focus { border-color: var(--accent); }
+    .chat-send {
+      background: var(--accent); border: none; border-radius: 10px;
+      width: 38px; height: 38px; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: opacity .15s;
+      flex-shrink: 0; color: #fff; font-size: 16px;
+    }
+    .chat-send:hover { opacity: .85; }
+    .chat-send:disabled { opacity: .4; cursor: not-allowed; }
+    .chat-key-form {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; margin: auto;
+      max-width: 320px; text-align: center;
+    }
+    .chat-key-form h3 { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+    .chat-key-form p { font-size: 11px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+    .chat-key-form input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; color: var(--text);
+      font-size: 12px; outline: none; margin-bottom: 10px;
+      font-family: monospace;
+    }
+    .chat-key-form input:focus { border-color: var(--accent); }
+    .chat-key-form button {
+      background: var(--accent); border: none; border-radius: 8px;
+      padding: 8px 24px; color: #fff; font-size: 12px;
+      font-weight: 700; cursor: pointer; transition: opacity .15s;
+    }
+    .chat-key-form button:hover { opacity: .85; }
+    @media (max-width: 500px) { .chat-panel { width: 100vw; } }
   </style>
 </head>
 <body>
@@ -854,6 +981,7 @@
     <button class="refresh-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="Auto-refresh every 5 min during market hours">⏸ Auto</button>
     <button class="refresh-btn" id="refreshBtn" onclick="refreshPrices()" title="Refresh live prices">↻ Refresh</button>
     <button class="trade-btn" onclick="openTradeModal()">+ Trade</button>
+    <button class="chat-btn" onclick="toggleChat()" title="AI Portfolio Assistant">🤖 AI Chat</button>
   </div>
 </header>
 
@@ -4458,6 +4586,262 @@ async function loadPricesJson() {
   }
 }
 
+// ─────────────────────────────────────────────
+// AI Chat
+// ─────────────────────────────────────────────
+const CHAT_API_KEY_LS = 'anthropic_api_key';
+let chatHistory = [];
+let chatStreaming = false;
+
+function toggleChat() {
+  const panel = document.getElementById('chatPanel');
+  const backdrop = document.getElementById('chatBackdrop');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  backdrop.classList.toggle('open', !isOpen);
+  if (!isOpen) {
+    // First open — show key prompt or welcome
+    const msgs = document.getElementById('chatMessages');
+    if (!msgs.children.length) {
+      if (!localStorage.getItem(CHAT_API_KEY_LS)) {
+        showApiKeyPrompt();
+      } else {
+        addChatSystemMsg("Ask me anything about your portfolio — performance, allocation, risk, what to buy or sell, and more.");
+      }
+    }
+    setTimeout(() => document.getElementById('chatInput').focus(), 200);
+  }
+}
+
+function showApiKeyPrompt() {
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML = `
+    <div class="chat-key-form">
+      <h3>🔑 Enter your Anthropic API Key</h3>
+      <p>Your key stays in your browser's localStorage and is sent directly to Anthropic. It's never stored on any server.</p>
+      <input type="password" id="chatKeyInput" placeholder="sk-ant-api03-…" onkeydown="if(event.key==='Enter')saveChatApiKey()" />
+      <button onclick="saveChatApiKey()">Connect</button>
+      <p style="margin-top:10px;font-size:10px">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">console.anthropic.com</a></p>
+    </div>`;
+}
+
+function saveChatApiKey() {
+  const key = document.getElementById('chatKeyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem(CHAT_API_KEY_LS, key);
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML = '';
+  addChatSystemMsg("✓ API key saved. Ask me anything about your portfolio!");
+  document.getElementById('chatInput').focus();
+}
+
+function changeChatApiKey() {
+  localStorage.removeItem(CHAT_API_KEY_LS);
+  chatHistory = [];
+  showApiKeyPrompt();
+}
+
+function clearChatHistory() {
+  chatHistory = [];
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML = '';
+  addChatSystemMsg("Chat cleared. Ask me anything about your portfolio!");
+}
+
+function addChatSystemMsg(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg system';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addChatMsg(role, html) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = html;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function autoResizeChatInput(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function buildPortfolioContext() {
+  const rows = PORTFOLIO.map(computeRow).filter(r => r.marketValue > 0);
+  const totalValue = rows.reduce((s, r) => s + r.marketValue, 0);
+  const totalCost = rows.reduce((s, r) => s + r.cost, 0);
+  const totalGain = totalValue - totalCost;
+  const totalGainPct = totalCost ? (totalGain / totalCost * 100).toFixed(1) : '0';
+  const cur = displayCurrency === 'NIS' ? '₪' : '$';
+
+  // Per-holding detail
+  const holdingLines = rows.sort((a, b) => b.marketValue - a.marketValue).map(r => {
+    const weight = (r.marketValue / totalValue * 100).toFixed(1);
+    return `  ${r.symbol} | ${r.name} | ${r.type} | ${r.segment} | ${r.country} | Qty: ${r.qty} | Avg Cost: ${r.avgCost.toFixed(2)} ${r.avgCostCurrency} | Current: ${r.currentPrice.toFixed(2)} ${r.currentCurrency} | Value: ${cur}${Math.round(r.marketValue).toLocaleString()} | Weight: ${weight}% | Total Return: ${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}% | Today: ${(r.dailyChangePct || 0) >= 0 ? '+' : ''}${(r.dailyChangePct || 0).toFixed(2)}%`;
+  }).join('\n');
+
+  // Segment allocation
+  const segments = {};
+  rows.forEach(r => {
+    if (!segments[r.segment]) segments[r.segment] = 0;
+    segments[r.segment] += r.marketValue;
+  });
+  const segLines = Object.entries(segments).sort((a, b) => b[1] - a[1])
+    .map(([seg, val]) => `  ${seg}: ${cur}${Math.round(val).toLocaleString()} (${(val / totalValue * 100).toFixed(1)}%)`)
+    .join('\n');
+
+  // Country allocation
+  const countries = {};
+  rows.forEach(r => {
+    const c = r.country || 'Unknown';
+    if (!countries[c]) countries[c] = 0;
+    countries[c] += r.marketValue;
+  });
+  const countryLines = Object.entries(countries).sort((a, b) => b[1] - a[1])
+    .map(([c, val]) => `  ${c}: ${cur}${Math.round(val).toLocaleString()} (${(val / totalValue * 100).toFixed(1)}%)`)
+    .join('\n');
+
+  // Top/bottom performers
+  const sorted = [...rows].sort((a, b) => b.gainPct - a.gainPct);
+  const top3 = sorted.slice(0, 3).map(r => `${r.symbol} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)`).join(', ');
+  const bottom3 = sorted.slice(-3).reverse().map(r => `${r.symbol} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)`).join(', ');
+
+  return `You are an expert portfolio analyst assistant. You have the user's complete, real-time portfolio data below. Answer questions precisely using this data. Be concise, use bullet points and numbers. When the user asks about financial metrics not in the data (like P/E, EPS, revenue), use your general knowledge of these companies. Today is ${new Date().toLocaleDateString()}.
+
+PORTFOLIO OVERVIEW:
+  Total Value: ${cur}${Math.round(totalValue).toLocaleString()}
+  Total Invested: ${cur}${Math.round(totalCost).toLocaleString()}
+  Total Gain/Loss: ${totalGain >= 0 ? '+' : ''}${cur}${Math.round(totalGain).toLocaleString()} (${totalGainPct}%)
+  Holdings: ${rows.length} assets
+  Display Currency: ${displayCurrency}
+  USD/NIS Rate: ${fxRate ? fxRate.toFixed(4) : 'N/A'}
+
+SEGMENT ALLOCATION:
+${segLines}
+
+COUNTRY ALLOCATION:
+${countryLines}
+
+TOP PERFORMERS: ${top3}
+WORST PERFORMERS: ${bottom3}
+
+ALL HOLDINGS:
+${holdingLines}`;
+}
+
+function renderMd(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface2);padding:8px;border-radius:6px;overflow-x:auto;font-size:11px;margin:6px 0"><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<strong style="font-size:14px;display:block;margin:8px 0 4px">$1</strong>')
+    .replace(/^## (.+)$/gm, '<strong style="font-size:15px;display:block;margin:10px 0 4px">$1</strong>')
+    .replace(/^# (.+)$/gm, '<strong style="font-size:16px;display:block;margin:12px 0 4px">$1</strong>')
+    .replace(/^[-•] (.+)$/gm, '<span style="display:block;padding-left:12px">• $1</span>')
+    .replace(/^\d+\. (.+)$/gm, (m, p1, offset, str) => `<span style="display:block;padding-left:12px">${m}</span>`)
+    .replace(/\n/g, '<br>');
+}
+
+async function sendChatMessage() {
+  if (chatStreaming) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const apiKey = localStorage.getItem(CHAT_API_KEY_LS);
+  if (!apiKey) { showApiKeyPrompt(); return; }
+
+  // Add user message
+  input.value = '';
+  input.style.height = 'auto';
+  chatHistory.push({ role: 'user', content: text });
+  addChatMsg('user', text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'));
+
+  // Add typing indicator
+  const assistantDiv = addChatMsg('assistant', '<div class="chat-typing"><span></span><span></span><span></span></div>');
+
+  chatStreaming = true;
+  document.getElementById('chatSendBtn').disabled = true;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: buildPortfolioContext(),
+        messages: chatHistory.filter(m => m.role === 'user' || m.role === 'assistant').slice(-20),
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        assistantDiv.innerHTML = '🔑 Invalid API key. Click the Key button above to update it.';
+        localStorage.removeItem(CHAT_API_KEY_LS);
+      } else {
+        assistantDiv.innerHTML = `⚠ Error ${response.status}: ${err.error?.message || 'Something went wrong.'}`;
+      }
+      chatHistory.pop(); // remove the user message that failed
+      return;
+    }
+
+    // Stream SSE
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+        try {
+          const evt = JSON.parse(data);
+          if (evt.type === 'content_block_delta' && evt.delta?.text) {
+            fullText += evt.delta.text;
+            assistantDiv.innerHTML = renderMd(fullText);
+            const msgs = document.getElementById('chatMessages');
+            msgs.scrollTop = msgs.scrollHeight;
+          }
+        } catch (_) {}
+      }
+    }
+
+    chatHistory.push({ role: 'assistant', content: fullText });
+
+  } catch (e) {
+    assistantDiv.innerHTML = `⚠ Network error: ${e.message}. Please try again.`;
+    chatHistory.pop();
+  } finally {
+    chatStreaming = false;
+    document.getElementById('chatSendBtn').disabled = false;
+  }
+}
+
 // Boot: load portfolio from server, then render everything
 (async () => {
   await loadPortfolioState();
@@ -4579,6 +4963,24 @@ async function loadPricesJson() {
   </div>
 </div>
 </div><!-- /appWrap -->
+
+<!-- AI Chat Panel -->
+<div id="chatBackdrop" class="chat-backdrop" onclick="toggleChat()"></div>
+<div id="chatPanel" class="chat-panel">
+  <div class="chat-header">
+    <div class="chat-header-title"><span>🤖</span> Portfolio AI</div>
+    <div class="chat-header-actions">
+      <button onclick="clearChatHistory()" title="New chat">🗑 Clear</button>
+      <button onclick="changeChatApiKey()" title="Change API key">🔑 Key</button>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+  </div>
+  <div id="chatMessages" class="chat-messages"></div>
+  <div class="chat-input-area">
+    <textarea id="chatInput" placeholder="Ask about your portfolio…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}" oninput="autoResizeChatInput(this)"></textarea>
+    <button class="chat-send" id="chatSendBtn" onclick="sendChatMessage()" title="Send">➤</button>
+  </div>
+</div>
 
 <script>
 // Password gate — SHA-256 hash comparison
