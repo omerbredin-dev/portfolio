@@ -3209,8 +3209,8 @@ function hmOver(el, event) {
     </div>
     <div style="color:var(--muted);font-size:11px;margin-bottom:6px">${d.seg}</div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px">
-      <span style="color:var(--muted)">Value</span>      <span>${fV(d.value)}</span>
-      <span style="color:var(--muted)">Weight</span>     <span>${d.pct.toFixed(2)}%</span>
+      <span style="color:var(--muted)">Value</span>      <span style="color:#e2e8f0;font-weight:600">${fV(d.value)}</span>
+      <span style="color:var(--muted)">Weight</span>     <span style="color:#e2e8f0;font-weight:600">${d.pct.toFixed(2)}%</span>
       <span style="color:var(--muted)">Total return</span><span style="color:${gCol};font-weight:700">${sign}${d.gainPct.toFixed(1)}%</span>
       <span style="color:var(--muted)">Today</span>      <span style="color:${dCol}">${dSign}${d.dailyChangePct.toFixed(2)}%</span>
     </div>`;
