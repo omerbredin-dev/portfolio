@@ -2983,32 +2983,99 @@ function renderHeatmap() {
 
   Object.values(GEO).forEach(g => g.items.sort((a, b) => b.marketValue - a.marketValue));
 
+  // ── Squarified treemap layout algorithm ──
+  function treemap(items, x, y, w, h) {
+    if (!items.length) return [];
+    const total = items.reduce((s, i) => s + i.value, 0);
+    if (total <= 0) return [];
+    const result = [];
+    let rem = items.map(i => ({ ...i }));
+    let cx = x, cy = y, cw = w, ch = h, remTotal = total;
+
+    function worst(row, rowSum, side) {
+      const area = (rowSum / remTotal) * cw * ch;
+      const rowLen = area / side;
+      let w = 0;
+      for (const it of row) {
+        const s = (it.value / rowSum) * side;
+        const r = Math.max(rowLen / s, s / rowLen);
+        if (r > w) w = r;
+      }
+      return w;
+    }
+
+    while (rem.length) {
+      const side = Math.min(cw, ch);
+      let row = [rem[0]], rowSum = rem[0].value;
+
+      for (let i = 1; i < rem.length; i++) {
+        const nRow = [...row, rem[i]], nSum = rowSum + rem[i].value;
+        if (worst(nRow, nSum, side) <= worst(row, rowSum, side)) {
+          row = nRow; rowSum = nSum;
+        } else break;
+      }
+
+      const frac = rowSum / remTotal;
+      const vertical = cw >= ch;
+      const thickness = vertical ? cw * frac : ch * frac;
+      let pos = 0;
+
+      for (const it of row) {
+        const itFrac = it.value / rowSum;
+        if (vertical) {
+          const len = ch * itFrac;
+          result.push({ rx: cx, ry: cy + pos, rw: thickness, rh: len, ...it });
+          pos += len;
+        } else {
+          const len = cw * itFrac;
+          result.push({ rx: cx + pos, ry: cy, rw: len, rh: thickness, ...it });
+          pos += len;
+        }
+      }
+
+      if (vertical) { cx += thickness; cw -= thickness; }
+      else           { cy += thickness; ch -= thickness; }
+      rem = rem.slice(row.length);
+      remTotal -= rowSum;
+    }
+    return result;
+  }
+
   // Tooltip data store
   const _hmData = [];
 
-  // Generate tile HTML for a region
-  function renderTiles(items) {
-    return items.map(item => {
+  // Render a treemap region as absolutely-positioned divs
+  function renderRegionTreemap(items, w, h) {
+    const tmItems = items.map(item => ({ value: item.marketValue, item }));
+    const rects = treemap(tmItems, 0, 0, w, h);
+    const GAP = 2;
+
+    return rects.map(r => {
+      const item = r.item;
       const pct = wmGetReturnPct(item, wmColorMode);
       const bg = wmColor(pct, wmColorMode);
       const sign = pct >= 0 ? '+' : '';
-      // Task 2: IL ETFs show name, others show symbol
       const isIlEtf = item.exchange === 'TASE' && item.type === 'ETF';
       const label = isIlEtf ? item.name.replace(/ ETF| \(IL\)/g, '') : item.symbol.replace('.TA', '');
-      const weight = item.marketValue / totalValue;
-      // Linear scaling — size truly reflects holding weight
-      const size = Math.max(34, Math.min(110, weight * 1100));
       const idx = _hmData.length;
+      const weight = item.marketValue / totalValue;
       _hmData.push({ symbol: item.symbol.replace('.TA',''), name: item.name, value: item.marketValue,
                       pct: weight * 100, gainPct: item.gainPct,
                       dailyChangePct: item.dailyChangePct || 0, seg: item.segment, _row: item });
 
-      const fontSize = isIlEtf ? Math.min(10, Math.max(6, Math.floor(size/8))) : (size > 80 ? 13 : size > 55 ? 11 : size > 40 ? 9 : 7);
-      const pctSize = size > 80 ? 11 : size > 55 ? 9 : size > 40 ? 8 : 7;
-      const showPct = size >= 38;
-      return `<div class="wm-tile" style="background:${bg};width:${size.toFixed(0)}px;height:${size.toFixed(0)}px"
+      const rw = r.rw - GAP, rh = r.rh - GAP;
+      const area = rw * rh;
+      const minDim = Math.min(rw, rh);
+      const fontSize = isIlEtf
+        ? Math.min(11, Math.max(6, Math.floor(minDim / 6)))
+        : (minDim > 60 ? 13 : minDim > 40 ? 11 : minDim > 25 ? 9 : 7);
+      const pctSize = minDim > 60 ? 11 : minDim > 40 ? 9 : minDim > 25 ? 8 : 7;
+      const showPct = area > 1200;
+      const showLabel = area > 400;
+
+      return `<div class="wm-tile" style="position:absolute;left:${r.rx.toFixed(1)}px;top:${r.ry.toFixed(1)}px;width:${rw.toFixed(1)}px;height:${rh.toFixed(1)}px;background:${bg}"
                    data-idx="${idx}" onmouseenter="hmOver(this,event)" onmousemove="hmMove(event)" onmouseleave="hmOut()">
-        <div class="wm-sym" style="font-size:${fontSize}px">${label}</div>
+        ${showLabel ? `<div class="wm-sym" style="font-size:${fontSize}px">${label}</div>` : ''}
         ${showPct ? `<div class="wm-pct" style="font-size:${pctSize}px">${sign}${pct.toFixed(wmColorMode === 'daily' ? 2 : 1)}%</div>` : ''}
       </div>`;
     }).join('');
@@ -3016,44 +3083,56 @@ function renderHeatmap() {
 
   // Calculate region totals
   const regionPcts = {};
+  const regionTotals = {};
   for (const [key, geo] of Object.entries(GEO)) {
     const val = geo.items.reduce((s, r) => s + r.marketValue, 0);
     regionPcts[key] = (val / totalValue * 100).toFixed(1);
+    regionTotals[key] = val;
   }
 
   window._hmData = _hmData;
 
-  // Simplified world map SVG outlines (subtle continent shapes behind tiles)
+  // Simplified world map SVG outlines
   const mapSvg = `<svg class="wm-bg-map" viewBox="0 0 1000 520" preserveAspectRatio="none">
-    <!-- North America -->
     <path d="M60,50 L120,25 L200,20 L260,30 L300,55 L310,90 L320,130 L310,170 L290,190
-             L250,210 L220,220 L190,210 L170,200 L150,170 L130,140 L100,120 L80,95
-             L60,70 Z" />
-    <!-- South America -->
+             L250,210 L220,220 L190,210 L170,200 L150,170 L130,140 L100,120 L80,95 L60,70 Z" />
     <path d="M220,250 L260,235 L290,250 L300,290 L295,340 L280,390 L260,420
              L240,430 L220,410 L210,370 L205,320 L210,280 Z" />
-    <!-- Europe -->
     <path d="M460,35 L490,25 L530,28 L560,40 L575,65 L570,95 L555,115
              L535,125 L510,130 L490,125 L475,110 L460,85 L455,55 Z" />
-    <!-- Africa -->
     <path d="M470,160 L510,145 L550,155 L575,185 L585,230 L580,300 L565,360
              L540,390 L510,400 L485,385 L465,340 L455,280 L455,210 Z" />
-    <!-- Middle East -->
-    <path d="M570,120 L600,110 L625,125 L630,160 L620,185 L595,195
-             L570,180 L565,150 Z" />
-    <!-- Asia -->
+    <path d="M570,120 L600,110 L625,125 L630,160 L620,185 L595,195 L570,180 L565,150 Z" />
     <path d="M620,25 L700,15 L780,20 L840,35 L880,65 L900,100 L895,145
              L875,180 L840,200 L790,215 L740,220 L690,210 L650,185
              L630,155 L615,120 L610,80 L615,45 Z" />
-    <!-- Southeast Asia -->
-    <path d="M790,230 L830,220 L860,235 L870,265 L855,285 L825,290
-             L800,275 L790,250 Z" />
-    <!-- Australia -->
-    <path d="M810,340 L860,320 L900,335 L920,370 L910,405 L875,420
-             L840,415 L815,390 L808,360 Z" />
+    <path d="M790,230 L830,220 L860,235 L870,265 L855,285 L825,290 L800,275 L790,250 Z" />
+    <path d="M810,340 L860,320 L900,335 L920,370 L910,405 L875,420 L840,415 L815,390 L808,360 Z" />
   </svg>`;
 
   const colorLabels = { daily: "Today", total: 'Total', '1y': '1Y', '3y': '3Y' };
+
+  // Region rectangle dimensions (px) — these define the treemap containers
+  // Regions are positioned geographically, sizes proportional to their portfolio weight
+  const REGION_RECTS = {
+    usa:     { left: '1%',  top: '7%',  w: 500, h: 380 },
+    europe:  { left: '53%', top: '3%',  w: 260, h: 160 },
+    israel:  { left: '55%', top: '38%', w: 230, h: 160 },
+    bitcoin: { left: '55%', top: '82%', w: 100, h: 60 },
+  };
+
+  // Build region HTML with treemap inside
+  function buildRegion(key) {
+    const geo = GEO[key];
+    if (!geo.items.length) return '';
+    const rect = REGION_RECTS[key];
+    return `<div class="wm-region" style="left:${rect.left};top:${rect.top};width:${rect.w}px">
+      <div class="wm-region-label">${geo.flag} ${geo.name} · ${regionPcts[key]}%</div>
+      <div style="position:relative;width:${rect.w}px;height:${rect.h}px">
+        ${renderRegionTreemap(geo.items, rect.w, rect.h)}
+      </div>
+    </div>`;
+  }
 
   container.innerHTML = `
     <div class="world-map">
@@ -3067,29 +3146,10 @@ function renderHeatmap() {
         ).join('')}
       </div>
 
-      <!-- USA — left side, like North America -->
-      <div class="wm-region" style="left:1%;top:10%;width:50%">
-        <div class="wm-region-label">${GEO.usa.flag} ${GEO.usa.name} · ${regionPcts.usa}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.usa.items)}</div>
-      </div>
-
-      <!-- Europe — upper center-right -->
-      <div class="wm-region" style="left:53%;top:4%;width:26%">
-        <div class="wm-region-label">${GEO.europe.flag} ${GEO.europe.name} · ${regionPcts.europe}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.europe.items)}</div>
-      </div>
-
-      <!-- Israel — aligned with Middle East on the map -->
-      <div class="wm-region" style="left:58%;top:30%;width:20%">
-        <div class="wm-region-label">${GEO.israel.flag} ${GEO.israel.name} · ${regionPcts.israel}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.israel.items)}</div>
-      </div>
-
-      <!-- Bitcoin — bottom center, floating like a global asset -->
-      <div class="wm-region" style="left:53%;bottom:30px;width:20%">
-        <div class="wm-region-label">${GEO.bitcoin.flag} ${GEO.bitcoin.name} · ${regionPcts.bitcoin}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.bitcoin.items)}</div>
-      </div>
+      ${buildRegion('usa')}
+      ${buildRegion('europe')}
+      ${buildRegion('israel')}
+      ${buildRegion('bitcoin')}
 
       <!-- Legend -->
       <div style="position:absolute;bottom:8px;left:12px;display:flex;align-items:center;gap:8px;font-size:10px;color:rgba(160,180,210,.6)">
