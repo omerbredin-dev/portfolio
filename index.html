@@ -303,9 +303,39 @@
       border-top: 1px dashed rgba(100,140,200,.2);
       pointer-events: none;
     }
+    .wm-bg-map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 1;
+    }
+    .wm-bg-map path {
+      fill: rgba(40,60,100,.07);
+      stroke: rgba(60,90,140,.1);
+      stroke-width: 1;
+    }
+    .wm-color-btn {
+      background: rgba(30,35,55,.8);
+      border: 1px solid rgba(80,100,140,.3);
+      border-radius: 5px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(160,180,210,.7);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .wm-color-btn:hover { color: #fff; border-color: rgba(100,130,180,.5); }
+    .wm-color-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
     @media (max-width: 700px) {
       .world-map { height: auto; min-height: 600px; }
-      .wm-region { position: relative !important; width: 100% !important; left: 0 !important; top: auto !important; padding: 8px; }
+      .wm-region { position: relative !important; width: 100% !important; left: 0 !important; top: auto !important; bottom: auto !important; padding: 8px; }
       .wm-tile .wm-sym { font-size: 10px; }
     }
 
@@ -987,7 +1017,7 @@ const PORTFOLIO = [
   { symbol:'QTUM',      name:'Defiance Quantum ETF',     type:'ETF',   exchange:'NASDAQ', country:'USA',    segment:'USA ETF',   qty:21,      avgCost:120.73,   avgCostCurrency:'USD', currentPrice:111.79,  currentCurrency:'USD', dailyChangePct:-1.76  },
   // ── Israel — local market ──
   { symbol:'BEZQ.TA',   name:'Bezeq',                    type:'Stock', exchange:'TASE',   country:'Israel', segment:'IL',        qty:1350,    avgCost:5.662,    avgCostCurrency:'NIS', currentPrice:8.999,   currentCurrency:'NIS', dailyChangePct: 0.67  },
-  { symbol:'KSMF74.TA', name:'Kesem TA-125 ETF',         type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:295,     avgCost:212.34,   avgCostCurrency:'NIS', currentPrice:421.90,  currentCurrency:'NIS', dailyChangePct: 1.25  },
+  { symbol:'KSMF74.TA', name:'Kesem TA-125 ETF',         type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:310,     avgCost:221.95,   avgCostCurrency:'NIS', currentPrice:421.90,  currentCurrency:'NIS', dailyChangePct: 1.25  },
   { symbol:'KSMF57.TA', name:'Kesem TA Financials ETF',  type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:28,      avgCost:581.56,   avgCostCurrency:'NIS', currentPrice:986.40,  currentCurrency:'NIS', dailyChangePct: 0.46  },
   { symbol:'HRLF15.TA', name:'Harel TA Real Estate ETF', type:'ETF',   exchange:'TASE',   country:'Israel', segment:'IL',        qty:800,     avgCost:12.00,    avgCostCurrency:'NIS', currentPrice:15.25,   currentCurrency:'NIS', dailyChangePct: 3.39  },
   // ── Israel-listed ETFs tracking Europe ──
@@ -1079,7 +1109,8 @@ const PURCHASE_HISTORY = {
                 { date:'27/02/2025', qty:25,       price:249.00,   currency:'NIS' },
                 { date:'16/04/2025', qty:40,       price:247.10,   currency:'NIS' },
                 { date:'18/06/2025', qty:29,       price:273.70,   currency:'NIS' },
-                { date:'05/08/2025', qty:26,       price:294.50,   currency:'NIS' }],
+                { date:'05/08/2025', qty:26,       price:294.50,   currency:'NIS' },
+                { date:'18/03/2026', qty:15,       price:411.00,   currency:'NIS' }],
   'KSMF57.TA': [{ date:'08/05/2025', qty:15,       price:523.80,   currency:'NIS' },
                 { date:'30/06/2025', qty:13,       price:648.20,   currency:'NIS' }],
   'HRLF15.TA': [{ date:'29/12/2021', qty:800,      price:12.00,    currency:'NIS' }],
@@ -2866,6 +2897,64 @@ function gainColor(pct) {
   }
 }
 
+let wmColorMode = 'daily'; // 'daily' | 'total' | '1y' | '3y'
+
+function wmGetReturnPct(item, mode) {
+  if (mode === 'daily') return item.dailyChangePct || 0;
+  if (mode === 'total') return item.gainPct || 0;
+  // 1Y or 3Y — use historical prices
+  const years = mode === '1y' ? 1 : 3;
+  const targetMs = Date.now() - years * 365.25 * 86400000;
+  const hist = historicalPrices[item.symbol];
+  if (hist?.length) {
+    let pastPrice = null;
+    for (const pt of hist) {
+      if (pt.ms <= targetMs + 86400000 * 45) pastPrice = pt.price;
+      else break;
+    }
+    if (pastPrice && pastPrice > 0) {
+      return ((item.currentPrice - pastPrice) / pastPrice) * 100;
+    }
+  }
+  // Fallback: for total if no historical data
+  return mode === '1y' ? (item.gainPct || 0) : (item.gainPct || 0);
+}
+
+function wmColor(pct, mode) {
+  // Scale depends on mode — daily uses ±4%, total/1y/3y use ±60%
+  const scale = mode === 'daily' ? 4 : 60;
+  if (Math.abs(pct) < (mode === 'daily' ? 0.05 : 0.5)) return 'rgb(50,55,75)';
+  if (pct > 0) {
+    const t = Math.min(pct / scale, 1);
+    return `rgb(${Math.round(40*(1-t)+15*t)},${Math.round(55*(1-t)+165*t)},${Math.round(50*(1-t)+60*t)})`;
+  } else {
+    const t = Math.min(Math.abs(pct) / scale, 1);
+    return `rgb(${Math.round(40*(1-t)+195*t)},${Math.round(55*(1-t)+35*t)},${Math.round(50*(1-t)+40*t)})`;
+  }
+}
+
+function setWmColor(mode) {
+  wmColorMode = mode;
+  document.querySelectorAll('.wm-color-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  // Re-color all tiles without full re-render
+  const tiles = document.querySelectorAll('.wm-tile');
+  tiles.forEach(el => {
+    const d = window._hmData?.[+el.dataset.idx];
+    if (!d) return;
+    const pct = wmGetReturnPct(d._row, mode);
+    const sign = pct >= 0 ? '+' : '';
+    el.style.background = wmColor(pct, mode);
+    const pctEl = el.querySelector('.wm-pct');
+    if (pctEl) pctEl.textContent = sign + pct.toFixed(mode === 'daily' ? 2 : 1) + '%';
+  });
+  // Update legend label
+  const lbl = document.getElementById('wmLegendLabel');
+  if (lbl) {
+    const labels = { daily: "today's change", total: 'total return', '1y': '1-year return', '3y': '3-year return' };
+    lbl.textContent = `Tile size = portfolio weight · Color = ${labels[mode]}`;
+  }
+}
+
 function renderHeatmap() {
   const container = document.getElementById('heatmapView');
   if (!container) return;
@@ -2891,48 +2980,37 @@ function renderHeatmap() {
 
   Object.values(GEO).forEach(g => g.items.sort((a, b) => b.marketValue - a.marketValue));
 
-  // Daily change color (Finviz style — green/red based on today's move)
-  function dailyColor(pct) {
-    if (Math.abs(pct) < 0.05) return 'rgb(50,55,75)'; // neutral
-    if (pct > 0) {
-      const t = Math.min(pct / 4, 1);
-      return `rgb(${Math.round(40*(1-t)+15*t)},${Math.round(55*(1-t)+165*t)},${Math.round(50*(1-t)+60*t)})`;
-    } else {
-      const t = Math.min(Math.abs(pct) / 4, 1);
-      return `rgb(${Math.round(40*(1-t)+195*t)},${Math.round(55*(1-t)+35*t)},${Math.round(50*(1-t)+40*t)})`;
-    }
-  }
-
   // Tooltip data store
   const _hmData = [];
 
   // Generate tile HTML for a region
-  function renderTiles(items, regionTotal) {
+  function renderTiles(items) {
     return items.map(item => {
-      const pct = item.dailyChangePct || 0;
-      const bg = dailyColor(pct);
+      const pct = wmGetReturnPct(item, wmColorMode);
+      const bg = wmColor(pct, wmColorMode);
       const sign = pct >= 0 ? '+' : '';
-      const sym = item.symbol.replace('.TA', '');
+      // Task 2: IL ETFs show name, others show symbol
+      const isIlEtf = item.exchange === 'TASE' && item.type === 'ETF';
+      const label = isIlEtf ? item.name.replace(/ ETF| \(IL\)/g, '') : item.symbol.replace('.TA', '');
       const weight = item.marketValue / totalValue;
-      // Size: sqrt of weight for area-proportional feel, min 44px, max 100px
       const base = Math.sqrt(weight) * 520;
       const size = Math.max(44, Math.min(100, base));
       const idx = _hmData.length;
-      _hmData.push({ symbol: sym, name: item.name, value: item.marketValue,
+      _hmData.push({ symbol: item.symbol.replace('.TA',''), name: item.name, value: item.marketValue,
                       pct: weight * 100, gainPct: item.gainPct,
-                      dailyChangePct: pct, seg: item.segment });
+                      dailyChangePct: item.dailyChangePct || 0, seg: item.segment, _row: item });
 
-      const fontSize = size > 75 ? 13 : size > 58 ? 11 : 9;
+      const fontSize = isIlEtf ? Math.min(10, Math.max(7, Math.floor(size/8))) : (size > 75 ? 13 : size > 58 ? 11 : 9);
       const pctSize = size > 75 ? 11 : size > 58 ? 9 : 8;
       return `<div class="wm-tile" style="background:${bg};width:${size.toFixed(0)}px;height:${size.toFixed(0)}px"
                    data-idx="${idx}" onmouseenter="hmOver(this,event)" onmousemove="hmMove(event)" onmouseleave="hmOut()">
-        <div class="wm-sym" style="font-size:${fontSize}px">${sym}</div>
-        <div class="wm-pct" style="font-size:${pctSize}px">${sign}${pct.toFixed(2)}%</div>
+        <div class="wm-sym" style="font-size:${fontSize}px">${label}</div>
+        <div class="wm-pct" style="font-size:${pctSize}px">${sign}${pct.toFixed(wmColorMode === 'daily' ? 2 : 1)}%</div>
       </div>`;
     }).join('');
   }
 
-  // Calculate region totals for sub-labels
+  // Calculate region totals
   const regionPcts = {};
   for (const [key, geo] of Object.entries(GEO)) {
     const val = geo.items.reduce((s, r) => s + r.marketValue, 0);
@@ -2941,32 +3019,72 @@ function renderHeatmap() {
 
   window._hmData = _hmData;
 
+  // Simplified world map SVG outlines (subtle continent shapes behind tiles)
+  const mapSvg = `<svg class="wm-bg-map" viewBox="0 0 1000 520" preserveAspectRatio="none">
+    <!-- North America -->
+    <path d="M60,50 L120,25 L200,20 L260,30 L300,55 L310,90 L320,130 L310,170 L290,190
+             L250,210 L220,220 L190,210 L170,200 L150,170 L130,140 L100,120 L80,95
+             L60,70 Z" />
+    <!-- South America -->
+    <path d="M220,250 L260,235 L290,250 L300,290 L295,340 L280,390 L260,420
+             L240,430 L220,410 L210,370 L205,320 L210,280 Z" />
+    <!-- Europe -->
+    <path d="M460,35 L490,25 L530,28 L560,40 L575,65 L570,95 L555,115
+             L535,125 L510,130 L490,125 L475,110 L460,85 L455,55 Z" />
+    <!-- Africa -->
+    <path d="M470,160 L510,145 L550,155 L575,185 L585,230 L580,300 L565,360
+             L540,390 L510,400 L485,385 L465,340 L455,280 L455,210 Z" />
+    <!-- Middle East -->
+    <path d="M570,120 L600,110 L625,125 L630,160 L620,185 L595,195
+             L570,180 L565,150 Z" />
+    <!-- Asia -->
+    <path d="M620,25 L700,15 L780,20 L840,35 L880,65 L900,100 L895,145
+             L875,180 L840,200 L790,215 L740,220 L690,210 L650,185
+             L630,155 L615,120 L610,80 L615,45 Z" />
+    <!-- Southeast Asia -->
+    <path d="M790,230 L830,220 L860,235 L870,265 L855,285 L825,290
+             L800,275 L790,250 Z" />
+    <!-- Australia -->
+    <path d="M810,340 L860,320 L900,335 L920,370 L910,405 L875,420
+             L840,415 L815,390 L808,360 Z" />
+  </svg>`;
+
+  const colorLabels = { daily: "Today", total: 'Total', '1y': '1Y', '3y': '3Y' };
+
   container.innerHTML = `
     <div class="world-map">
+      ${mapSvg}
       <div class="wm-grid"></div>
+
+      <!-- Color mode filter -->
+      <div style="position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5">
+        ${['daily','total','1y','3y'].map(m =>
+          `<button class="wm-color-btn${wmColorMode === m ? ' active' : ''}" data-mode="${m}" onclick="setWmColor('${m}')">${colorLabels[m]}</button>`
+        ).join('')}
+      </div>
 
       <!-- USA — left side, like North America -->
       <div class="wm-region" style="left:1%;top:10%;width:50%">
         <div class="wm-region-label">${GEO.usa.flag} ${GEO.usa.name} · ${regionPcts.usa}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.usa.items, totalValue)}</div>
+        <div class="wm-tiles">${renderTiles(GEO.usa.items)}</div>
       </div>
 
       <!-- Europe — upper center-right -->
       <div class="wm-region" style="left:53%;top:4%;width:26%">
         <div class="wm-region-label">${GEO.europe.flag} ${GEO.europe.name} · ${regionPcts.europe}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.europe.items, totalValue)}</div>
+        <div class="wm-tiles">${renderTiles(GEO.europe.items)}</div>
       </div>
 
       <!-- Israel — right of Europe, slightly lower -->
       <div class="wm-region" style="left:74%;top:32%;width:25%">
         <div class="wm-region-label">${GEO.israel.flag} ${GEO.israel.name} · ${regionPcts.israel}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.israel.items, totalValue)}</div>
+        <div class="wm-tiles">${renderTiles(GEO.israel.items)}</div>
       </div>
 
       <!-- Bitcoin — bottom center, floating like a global asset -->
       <div class="wm-region" style="left:53%;bottom:30px;width:20%">
         <div class="wm-region-label">${GEO.bitcoin.flag} ${GEO.bitcoin.name} · ${regionPcts.bitcoin}%</div>
-        <div class="wm-tiles">${renderTiles(GEO.bitcoin.items, totalValue)}</div>
+        <div class="wm-tiles">${renderTiles(GEO.bitcoin.items)}</div>
       </div>
 
       <!-- Legend -->
@@ -2974,7 +3092,7 @@ function renderHeatmap() {
         <span>Decline</span>
         <div style="width:120px;height:8px;border-radius:4px;background:linear-gradient(to right,rgb(195,35,40),rgb(50,55,75),rgb(15,165,60))"></div>
         <span>Gain</span>
-        <span style="margin-left:12px;font-size:9px">Tile size = portfolio weight · Color = today's change</span>
+        <span id="wmLegendLabel" style="margin-left:12px;font-size:9px">Tile size = portfolio weight · Color = today's change</span>
       </div>
     </div>
     <div id="hmTip" style="position:fixed;pointer-events:none;display:none;z-index:9999;background:rgba(15,17,23,.97);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;max-width:230px;line-height:1.65"></div>
