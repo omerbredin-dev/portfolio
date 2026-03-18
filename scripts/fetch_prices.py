@@ -107,74 +107,124 @@ def fetch_indexes():
     return out
 
 
-def fetch_historical_prices():
+# Map TASE ETFs → benchmark index tickers on Yahoo for proxy historical data
+# Each TASE ETF tracks a specific index; we use that index's performance as a proxy
+TASE_BENCHMARK = {
+    'KSMF74.TA':  '^TA125.TA',   # Kesem TA-125 → TA-125 index
+    'KSMF57.TA':  '^TA125.TA',   # Kesem TA Financials → TA-125 (closest)
+    'HRLF15.TA':  '^TA125.TA',   # Harel TA Real Estate → TA-125
+    'TCHF12.TA':  '^GDAXI',      # Tachlit DAX 30 → DAX index
+    'iSFF301.TA': '^STOXX50E',   # iShares MSCI Europe → STOXX 50
+    'iSFF501.TA': '^GSPC',       # iShares Technology → S&P 500 (proxy)
+    'INFF1.TA':   '^GSPC',       # Source S&P 500 UCITS → S&P 500
+    'iSFF702.TA': '^GSPC',       # iShares S&P 500 → S&P 500
+}
+
+
+def _fetch_yahoo_history(ticker, p1, p2, divide_100=False):
+    """Fetch monthly history from Yahoo. Returns list of {ms, price} or None."""
+    try:
+        url = (f'https://query2.finance.yahoo.com/v8/finance/chart/'
+               f'{urllib.request.quote(ticker)}?interval=1mo&period1={p1}&period2={p2}')
+        data = fetch_json(url, timeout=20)
+        result = data.get('chart', {}).get('result', [{}])[0]
+        timestamps = result.get('timestamp', [])
+        closes = (result.get('indicators', {}).get('adjclose', [{}])[0].get('adjclose')
+                 or result.get('indicators', {}).get('quote', [{}])[0].get('close', []))
+        pts = []
+        for i, ts in enumerate(timestamps):
+            c = closes[i] if i < len(closes) else None
+            if c is not None:
+                price = c / 100 if divide_100 else c
+                pts.append({'ms': ts * 1000, 'price': price})
+        if not pts:
+            return None
+        # Filter outliers (>5x from neighbors)
+        filtered = []
+        for i, p in enumerate(pts):
+            prev_p = pts[i-1]['price'] if i > 0 else None
+            next_p = pts[i+1]['price'] if i < len(pts)-1 else None
+            ref = prev_p or next_p
+            if ref is None or (p['price'] >= ref / 5 and p['price'] <= ref * 5):
+                filtered.append(p)
+        return filtered if filtered else None
+    except:
+        return None
+
+
+def fetch_historical_prices(current_prices):
     """Fetch monthly historical prices for all symbols (for the return chart).
-    Yahoo Finance for global symbols, TradingView for TASE.
-    Returns { symbol: [ {ms, price}, ... ] }
+    Yahoo Finance for global symbols. For TASE ETFs without Yahoo data,
+    uses benchmark index performance as a proxy.
+    current_prices: dict of {symbol: {price, dailyPct}} from live fetch.
+    Returns dict { symbol: [ {ms, price}, ... ] }
     """
     history = {}
-    # Earliest date: Jan 2022 (covers user's full history)
-    p1 = int(datetime(2022, 1, 1).timestamp())
+    p1 = int(datetime(2017, 1, 1).timestamp())  # Go back far enough for all purchases
     p2 = int(datetime.now().timestamp())
 
-    # Global symbols via Yahoo monthly chart
+    # 1) Global symbols via Yahoo monthly chart
     for sym in GLOBAL_SYMBOLS:
-        try:
-            ticker = YAHOO_TICKER.get(sym, sym)
-            url = (f'https://query2.finance.yahoo.com/v8/finance/chart/'
-                   f'{urllib.request.quote(ticker)}?interval=1mo&period1={p1}&period2={p2}')
-            data = fetch_json(url, timeout=20)
-            result = data.get('chart', {}).get('result', [{}])[0]
-            timestamps = result.get('timestamp', [])
-            closes = (result.get('indicators', {}).get('adjclose', [{}])[0].get('adjclose')
-                     or result.get('indicators', {}).get('quote', [{}])[0].get('close', []))
-            pts = []
-            for i, ts in enumerate(timestamps):
-                c = closes[i] if i < len(closes) else None
-                if c is not None:
-                    pts.append({'ms': ts * 1000, 'price': c})
-            if pts:
-                # Filter outliers (>5x from neighbors)
-                filtered = []
-                for i, p in enumerate(pts):
-                    prev_p = pts[i-1]['price'] if i > 0 else None
-                    next_p = pts[i+1]['price'] if i < len(pts)-1 else None
-                    ref = prev_p or next_p
-                    if ref is None or (p['price'] >= ref / 5 and p['price'] <= ref * 5):
-                        filtered.append(p)
-                history[sym] = filtered
-        except Exception as e:
-            print(f'  WARN history {sym}: {e}', file=sys.stderr)
+        ticker = YAHOO_TICKER.get(sym, sym)
+        pts = _fetch_yahoo_history(ticker, p1, p2)
+        if pts:
+            history[sym] = pts
+        else:
+            print(f'  WARN history {sym}: no data', file=sys.stderr)
 
-    # TASE symbols via Yahoo (only BEZQ.TA works, others won't)
+    # 2) TASE symbols — try Yahoo first (only BEZQ.TA works)
     for sym in TASE_SYMBOLS:
-        try:
-            ticker = sym  # e.g. KSMF74.TA
-            url = (f'https://query2.finance.yahoo.com/v8/finance/chart/'
-                   f'{urllib.request.quote(ticker)}?interval=1mo&period1={p1}&period2={p2}')
-            data = fetch_json(url, timeout=20)
-            result = data.get('chart', {}).get('result', [{}])[0]
-            timestamps = result.get('timestamp', [])
-            closes = (result.get('indicators', {}).get('adjclose', [{}])[0].get('adjclose')
-                     or result.get('indicators', {}).get('quote', [{}])[0].get('close', []))
-            pts = []
-            for i, ts in enumerate(timestamps):
-                c = closes[i] if i < len(closes) else None
-                if c is not None:
-                    # TASE prices from Yahoo are in agorot, convert to NIS
-                    pts.append({'ms': ts * 1000, 'price': c / 100})
-            if pts:
-                filtered = []
-                for i, p in enumerate(pts):
-                    prev_p = pts[i-1]['price'] if i > 0 else None
-                    next_p = pts[i+1]['price'] if i < len(pts)-1 else None
-                    ref = prev_p or next_p
-                    if ref is None or (p['price'] >= ref / 5 and p['price'] <= ref * 5):
-                        filtered.append(p)
-                history[sym] = filtered
-        except Exception as e:
-            # Expected for most TASE ETFs (Yahoo doesn't have them)
-            pass
+        pts = _fetch_yahoo_history(sym, p1, p2, divide_100=True)
+        if pts:
+            history[sym] = pts
+
+    # 3) Fetch benchmark indexes for TASE proxy
+    benchmarks_needed = set()
+    for sym, bench in TASE_BENCHMARK.items():
+        if sym not in history:
+            benchmarks_needed.add(bench)
+
+    bench_data = {}
+    for bench in benchmarks_needed:
+        pts = _fetch_yahoo_history(bench, p1, p2,
+                                   divide_100=bench.endswith('.TA'))
+        if pts:
+            bench_data[bench] = {p['ms']: p['price'] for p in pts}
+            print(f'  Benchmark {bench}: {len(pts)} months', file=sys.stderr)
+
+    # 4) Generate proxy history for TASE symbols without direct data
+    #    Formula: estimatedPrice(t) = currentPrice * (indexAtT / indexNow)
+    #    This preserves the index's shape (drawdowns, rallies)
+    for sym, bench in TASE_BENCHMARK.items():
+        if sym in history:
+            continue  # Already have direct data
+        if bench not in bench_data:
+            print(f'  WARN proxy {sym}: no benchmark {bench}', file=sys.stderr)
+            continue
+
+        idx_series = bench_data[bench]
+        if not idx_series:
+            continue
+
+        # Get current TASE price from live prices
+        cur = current_prices.get(sym, {}).get('price')
+        if not cur:
+            print(f'  WARN proxy {sym}: no current price', file=sys.stderr)
+            continue
+
+        # Get the most recent index value
+        sorted_ms = sorted(idx_series.keys())
+        idx_now = idx_series[sorted_ms[-1]]
+
+        # Generate proxy: price(t) = currentPrice * (index(t) / indexNow)
+        proxy_pts = []
+        for ms in sorted_ms:
+            idx_val = idx_series[ms]
+            estimated = cur * (idx_val / idx_now)
+            proxy_pts.append({'ms': ms, 'price': round(estimated, 4)})
+
+        history[sym] = proxy_pts
+        print(f'  Proxy {sym} via {bench}: {len(proxy_pts)} months', file=sys.stderr)
 
     return history
 
@@ -232,7 +282,7 @@ def main():
     # Fetch historical prices (for return chart)
     history = {}
     try:
-        history = fetch_historical_prices()
+        history = fetch_historical_prices(prices)
         print(f'  Historical: {len(history)} symbols with data', file=sys.stderr)
     except Exception as e:
         errors.append(f'Historical: {e}')
