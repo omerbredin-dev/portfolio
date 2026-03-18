@@ -1458,8 +1458,11 @@ function renderTransactions() {
 
   // Build flat list: BUY transactions
   const filteredSymbols = new Set(getFiltered().map(r => r.symbol));
-  // Also include symbols that were fully sold (exist in SELL_HISTORY but not PORTFOLIO)
-  Object.keys(SELL_HISTORY).forEach(sym => filteredSymbols.add(sym));
+  // Also include sold symbols that pass the current search filter
+  const q = (document.getElementById('searchBox')?.value || '').toLowerCase();
+  Object.keys(SELL_HISTORY).forEach(sym => {
+    if (!q || sym.toLowerCase().includes(q)) filteredSymbols.add(sym);
+  });
 
   const txns = [];
 
