@@ -801,6 +801,21 @@
     .trade-submit.sell { background: var(--red);   color: #fff; }
     .trade-submit:hover { opacity: .85; }
     .trade-msg { font-size: 12px; color: var(--muted); margin-top: 10px; text-align: center; min-height: 18px; }
+    /* Symbol search results */
+    .sym-search-results {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      max-height: 180px; overflow-y: auto; margin-top: 4px;
+    }
+    .sym-search-item {
+      padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; font-size: 12px; transition: background .12s; border-bottom: 1px solid var(--border);
+    }
+    .sym-search-item:last-child { border-bottom: none; }
+    .sym-search-item:hover { background: rgba(99,102,241,.15); }
+    .sym-search-item .sym-ticker { font-weight: 700; color: var(--text); }
+    .sym-search-item .sym-name { color: var(--muted); font-size: 11px; margin-left: 8px; flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sym-search-item .sym-exch { color: var(--accent); font-size: 10px; margin-left: 8px; min-width: 40px; text-align: right; }
+    .sym-search-loading { padding: 10px; text-align: center; color: var(--muted); font-size: 12px; }
     .trade-reset { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
     .trade-reset button { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
     .trade-reset button:hover { color: var(--red); }
@@ -3683,10 +3698,6 @@ async function resetPortfolio() {
 let tradeMode = 'buy';
 
 function openTradeModal() {
-  // Populate buy datalist
-  document.getElementById('symbolList').innerHTML =
-    PORTFOLIO.map(r => `<option value="${r.symbol}">`).join('');
-
   // Populate sell select
   const sellSel = document.getElementById('sell-symbol');
   sellSel.innerHTML = PORTFOLIO.map(r =>
@@ -3699,11 +3710,15 @@ function openTradeModal() {
   document.getElementById('buy-date').value  = todayStr;
   document.getElementById('sell-date').value = todayStr;
 
+  // Clear buy form
+  clearBuySymbol();
+
   // Clear messages
   document.getElementById('buyMsg').textContent  = '';
   document.getElementById('sellMsg').textContent = '';
 
   document.getElementById('tradeOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('buy-symbol').focus(), 100);
 }
 
 function closeTradeModal() {
@@ -3718,19 +3733,154 @@ function setTradeMode(mode) {
   document.getElementById('tradeTabSell').className = 'trade-tab sell' + (mode === 'sell' ? ' active' : '');
 }
 
-function onBuySymbolChange() {
-  const sym    = document.getElementById('buy-symbol').value.trim().toUpperCase();
-  const exists = PORTFOLIO.some(r => r.symbol === sym);
-  document.getElementById('buy-new-fields').style.display = exists ? 'none' : '';
-  // Show agorot hint for TASE symbols
+// ── Symbol search / lookup ──
+let _symSearchTimer = null;
+let _symSearchSelected = false;
+
+function clearBuySymbol() {
+  _symSearchSelected = false;
+  const inp = document.getElementById('buy-symbol');
+  inp.value = '';
+  inp.readOnly = false;
+  inp.style.display = '';
+  document.getElementById('buy-selected-info').style.display = 'none';
+  document.getElementById('buy-search-results').style.display = 'none';
+  document.getElementById('buy-name').value = '';
+  document.getElementById('buy-current-price').value = '0';
+  // Reset agorot hint
   const hint = document.getElementById('buy-price-hint');
-  if (hint) {
-    const isTASE = sym.endsWith('.TA') || PORTFOLIO.some(r => r.symbol === sym && r.exchange === 'TASE');
-    hint.textContent = isTASE ? '(agorot → auto-converts to NIS)' : '';
+  if (hint) hint.textContent = '';
+  document.getElementById('buy-currency').value = 'USD';
+  setTimeout(() => inp.focus(), 50);
+}
+
+function selectBuySymbol(sym, name, exchange, type, country, segment, curPrice, currency) {
+  _symSearchSelected = true;
+  const inp = document.getElementById('buy-symbol');
+  inp.value = sym;
+  inp.readOnly = true;
+  document.getElementById('buy-search-results').style.display = 'none';
+
+  // Show selected info badge
+  document.getElementById('buy-selected-label').textContent = `${sym} — ${name}`;
+  document.getElementById('buy-selected-exch').textContent = exchange;
+  document.getElementById('buy-selected-info').style.display = '';
+
+  // Fill hidden fields
+  document.getElementById('buy-name').value = name;
+  document.getElementById('buy-type').value = type;
+  document.getElementById('buy-exchange').value = exchange;
+  document.getElementById('buy-country').value = country;
+  document.getElementById('buy-segment').value = segment;
+  document.getElementById('buy-current-price').value = curPrice || 0;
+
+  // Set currency
+  document.getElementById('buy-currency').value = currency;
+
+  // Agorot hint for TASE
+  const hint = document.getElementById('buy-price-hint');
+  if (hint) hint.textContent = (exchange === 'TASE') ? '(agorot → auto-converts to NIS)' : '';
+
+  // Focus on qty
+  document.getElementById('buy-qty').focus();
+}
+
+function onBuySymbolInput() {
+  if (_symSearchSelected) return;
+  const q = document.getElementById('buy-symbol').value.trim();
+  clearTimeout(_symSearchTimer);
+  const results = document.getElementById('buy-search-results');
+
+  if (q.length < 1) { results.style.display = 'none'; return; }
+
+  // Show portfolio matches immediately
+  const pMatches = PORTFOLIO.filter(r =>
+    r.symbol.toLowerCase().includes(q.toLowerCase()) ||
+    r.name.toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 5);
+
+  let html = pMatches.map(r => {
+    const cur = r.exchange === 'TASE' ? 'NIS' : 'USD';
+    return `<div class="sym-search-item" onclick="selectBuySymbol('${r.symbol}','${r.name.replace(/'/g,"\\'")}','${r.exchange}','${r.type}','${r.country}','${r.segment}',${r.currentPrice},'${cur}')">
+      <span class="sym-ticker">${r.symbol}</span>
+      <span class="sym-name">${r.name}</span>
+      <span class="sym-exch">${r.exchange}</span>
+    </div>`;
+  }).join('');
+  if (q.length >= 2) html += `<div class="sym-search-loading" id="sym-web-loading">🔍 Searching markets…</div>`;
+  results.innerHTML = html;
+  results.style.display = (html || q.length >= 2) ? '' : 'none';
+
+  // Debounce web search
+  if (q.length >= 2) {
+    _symSearchTimer = setTimeout(() => searchSymbolWeb(q), 400);
   }
-  // Auto-set currency for TASE symbols
-  if (sym.endsWith('.TA') || PORTFOLIO.some(r => r.symbol === sym && r.exchange === 'TASE')) {
-    document.getElementById('buy-currency').value = 'NIS';
+}
+
+function onBuySymbolKey(event) {
+  if (event.key === 'Escape') {
+    document.getElementById('buy-search-results').style.display = 'none';
+  }
+}
+
+async function searchSymbolWeb(query) {
+  const results = document.getElementById('buy-search-results');
+  try {
+    const url = `https://corsproxy.io/?url=${encodeURIComponent('https://query1.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(query) + '&quotesCount=8&newsCount=0')}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const quotes = (data.quotes || []).filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF');
+
+    // Remove loading indicator
+    const loading = document.getElementById('sym-web-loading');
+    if (loading) loading.remove();
+
+    // Keep portfolio matches at top
+    const existing = new Set(PORTFOLIO.map(r => r.symbol));
+    const webItems = quotes.filter(q => !existing.has(q.symbol)).slice(0, 6);
+
+    if (!webItems.length) {
+      if (!results.children.length) {
+        results.innerHTML = '<div class="sym-search-loading">No results found</div>';
+      }
+      return;
+    }
+
+    // Append web results
+    const html = webItems.map(q => {
+      const sym = q.symbol;
+      const name = (q.shortname || q.longname || sym).replace(/'/g, "\\'");
+      const exch = q.exchange || '';
+      const type = q.quoteType === 'ETF' ? 'ETF' : 'Stock';
+
+      // Determine exchange/country/segment
+      let exchange = 'NASDAQ', country = 'USA', segment = 'US Stocks', currency = 'USD';
+      const exchUpper = exch.toUpperCase();
+      if (sym.endsWith('.TA') || exchUpper.includes('TEL AVIV') || exchUpper === 'TLV') {
+        exchange = 'TASE'; country = 'Israel'; segment = 'IL'; currency = 'NIS';
+      } else if (exchUpper.includes('NYSE') || exchUpper === 'NYQ' || exchUpper === 'NMS' || exchUpper === 'NGM') {
+        exchange = exchUpper.includes('NYSE') ? 'NYSE' : 'NASDAQ';
+      } else if (exchUpper.includes('AMS') || exchUpper.includes('PAR') || exchUpper.includes('FRA') || exchUpper.includes('MIL') || exchUpper.includes('LSE') || exchUpper.includes('ETR') || exchUpper.includes('STO')) {
+        exchange = exch; country = 'Europe'; segment = 'Europe';
+      }
+      if (type === 'ETF' && country === 'USA') segment = 'USA ETF';
+
+      return `<div class="sym-search-item" onclick="selectBuySymbol('${sym}','${name}','${exchange}','${type}','${country}','${segment}',0,'${currency}')">
+        <span class="sym-ticker">${sym} <span style="color:var(--green);font-size:9px;font-weight:400">NEW</span></span>
+        <span class="sym-name">${q.shortname || q.longname || ''}</span>
+        <span class="sym-exch">${exch}</span>
+      </div>`;
+    }).join('');
+
+    // Append after existing portfolio matches
+    const loadingEl = document.getElementById('sym-web-loading');
+    if (loadingEl) loadingEl.outerHTML = html;
+    else results.insertAdjacentHTML('beforeend', html);
+    results.style.display = '';
+
+  } catch (e) {
+    const loading = document.getElementById('sym-web-loading');
+    if (loading) loading.textContent = 'Search unavailable — type symbol manually';
   }
 }
 
@@ -4322,55 +4472,21 @@ async function loadPricesJson() {
       <div id="buyForm">
         <div class="trade-field">
           <label>Symbol</label>
-          <input type="text" id="buy-symbol" list="symbolList" placeholder="NVDA, AAPL…" autocomplete="off" oninput="onBuySymbolChange()" />
-          <datalist id="symbolList"></datalist>
+          <input type="text" id="buy-symbol" placeholder="Search symbol or name…" autocomplete="off" oninput="onBuySymbolInput()" onkeydown="onBuySymbolKey(event)" />
+          <div id="buy-search-results" class="sym-search-results" style="display:none"></div>
         </div>
-        <div id="buy-new-fields" style="display:none">
-          <div class="trade-field">
-            <label>Asset Name</label>
-            <input type="text" id="buy-name" placeholder="Company / ETF name" />
-          </div>
-          <div class="trade-row">
-            <div class="trade-field">
-              <label>Type</label>
-              <select id="buy-type">
-                <option value="Stock">Stock</option>
-                <option value="ETF">ETF</option>
-              </select>
-            </div>
-            <div class="trade-field">
-              <label>Exchange</label>
-              <select id="buy-exchange">
-                <option value="NASDAQ">NASDAQ</option>
-                <option value="NYSE">NYSE</option>
-                <option value="TASE">TASE</option>
-              </select>
-            </div>
-          </div>
-          <div class="trade-row">
-            <div class="trade-field">
-              <label>Country</label>
-              <select id="buy-country">
-                <option value="USA">USA</option>
-                <option value="Israel">Israel</option>
-              </select>
-            </div>
-            <div class="trade-field">
-              <label>Segment</label>
-              <select id="buy-segment">
-                <option value="US Stocks">US Stocks</option>
-                <option value="USA ETF">USA ETF</option>
-                <option value="IL">IL</option>
-                <option value="Europe">Europe</option>
-                <option value="Bitcoin">Bitcoin</option>
-              </select>
-            </div>
-          </div>
-          <div class="trade-field">
-            <label>Current Price (native currency)</label>
-            <input type="number" id="buy-current-price" min="0" step="0.01" placeholder="Market price today" />
-          </div>
+        <div id="buy-selected-info" style="display:none;margin:-8px 0 12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
+          <span id="buy-selected-label" style="color:var(--text);font-weight:600"></span>
+          <span id="buy-selected-exch" style="color:var(--muted);margin-left:6px;font-size:11px"></span>
+          <button onclick="clearBuySymbol()" style="float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕ change</button>
         </div>
+        <!-- Hidden fields for new holding metadata (auto-filled by search) -->
+        <input type="hidden" id="buy-name" />
+        <input type="hidden" id="buy-type" value="Stock" />
+        <input type="hidden" id="buy-exchange" value="NASDAQ" />
+        <input type="hidden" id="buy-country" value="USA" />
+        <input type="hidden" id="buy-segment" value="US Stocks" />
+        <input type="hidden" id="buy-current-price" value="0" />
         <div class="trade-row">
           <div class="trade-field">
             <label>Date</label>
