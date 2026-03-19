@@ -1616,7 +1616,8 @@ function computeRow(r) {
   const cost        = toDisplay(r.avgCost * r.qty,      r.avgCostCurrency);
   const gainAbs     = marketValue - cost;
   const gainPct     = cost !== 0 ? (gainAbs / cost) * 100 : 0;
-  return { ...r, marketValue, cost, gainAbs, gainPct };
+  const dailyGain   = marketValue - marketValue / (1 + (r.dailyChangePct || 0) / 100);
+  return { ...r, marketValue, cost, gainAbs, gainPct, dailyGain };
 }
 
 // ─────────────────────────────────────────────
@@ -1888,8 +1889,7 @@ function renderTable() {
 
   tbody.innerHTML = rows.map(r => {
     const up = r.gainAbs >= 0;
-    const dailyGain = r.marketValue - r.marketValue / (1 + (r.dailyChangePct || 0) / 100);
-    r.dailyGain = dailyGain;
+    const dailyGain = r.dailyGain;
     const dayUp = r.dailyChangePct >= 0;
     const flag = r.country === 'USA' ? '🇺🇸' : '🇮🇱';
     const badgeClass = 'badge-' + r.type.toLowerCase();
