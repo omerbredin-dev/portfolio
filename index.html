@@ -820,6 +820,15 @@
     .trade-reset button { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
     .trade-reset button:hover { color: var(--red); }
 
+    /* ── Totals row ── */
+    .totals-row {
+      background: var(--surface2) !important;
+      border-top: 2px solid var(--border);
+      font-weight: 700;
+    }
+    .totals-row td { padding-top: 10px !important; padding-bottom: 10px !important; font-size: 13px; }
+    .totals-row .totals-label { color: var(--accent); font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
+
     /* ── AI Chat panel ── */
     .chat-btn {
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -1530,6 +1539,11 @@ function computeRow(r) {
 // ─────────────────────────────────────────────
 // Filter + sort
 // ─────────────────────────────────────────────
+function isFilterActive() {
+  const q = (document.getElementById('searchBox')?.value || '').toLowerCase();
+  return !activeFilters.country.has('All') || !activeFilters.type.has('All') || !activeFilters.exchange.has('All') || !!q;
+}
+
 function getFiltered() {
   const q = document.getElementById('searchBox').value.toLowerCase();
   return PORTFOLIO
@@ -1728,6 +1742,24 @@ function renderTransactions() {
       </td>
     </tr>`;
   }).join('');
+
+  // ── Totals row when filter is active ──
+  if (isFilterActive() && txns.length > 0) {
+    const tCost  = txns.reduce((s, t) => s + t.costBasis, 0);
+    const tVal   = txns.reduce((s, t) => s + t.currentVal, 0);
+    const tGain  = txns.reduce((s, t) => s + t.gain, 0);
+    const tPct   = tCost ? (tGain / tCost * 100) : 0;
+    const up     = tGain >= 0;
+    tbody.innerHTML += `<tr class="totals-row">
+      <td><span class="totals-label">Total (${txns.length})</span></td>
+      <td></td><td></td><td></td>
+      <td class="num">${fmt(tCost)}</td>
+      <td class="num">${fmt(tVal)}</td>
+      <td class="num ${up?'up':'down'}">${up?'+':''}${fmt(tGain)}</td>
+      <td class="num ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(tPct).toFixed(1)}%</td>
+      <td></td>
+    </tr>`;
+  }
 }
 
 function renderTable() {
@@ -1813,6 +1845,37 @@ function renderTable() {
     const rowHtml = `<tr class="asset-row${isExpanded ? ' expanded' : ''}" data-symbol="${r.symbol}">${cells}</tr>`;
     return rowHtml + (isExpanded ? buildDetailRowHtml(r, colCount) : '');
   }).join('');
+
+  // ── Totals row when filter is active ──
+  if (isFilterActive() && rows.length > 0) {
+    const tMV   = rows.reduce((s, r) => s + r.marketValue, 0);
+    const tCost = rows.reduce((s, r) => s + r.cost, 0);
+    const tGain = tMV - tCost;
+    const tGainPct = tCost ? (tGain / tCost * 100) : 0;
+    const tPortPct = totalPortfolio ? (tMV / totalPortfolio * 100) : 0;
+    const tDailyPct = tMV ? rows.reduce((s, r) => s + (r.dailyChangePct || 0) * r.marketValue, 0) / tMV : 0;
+    const up = tGain >= 0;
+    const dayUp = tDailyPct >= 0;
+
+    if (isPerf) {
+      tbody.innerHTML += `<tr class="totals-row">
+        <td><span class="totals-label">Total (${rows.length})</span></td>
+        <td class="num num-value">${fmt(tMV)}</td>
+        <td class="num"><span class="${up?'up':'down'}" style="font-weight:600">${up?'+':''}${fmt(tGain)}</span></td>
+        <td class="num"><span class="change-pill ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(tGainPct).toFixed(1)}%</span></td>
+        <td class="num"><span class="change-pill ${dayUp?'up':'down'}">${dayUp?'▲':'▼'} ${Math.abs(tDailyPct).toFixed(2)}%</span></td>
+        <td class="num" style="font-size:12px;color:var(--accent);font-weight:700">${tPortPct.toFixed(1)}%</td>
+      </tr>`;
+    } else {
+      tbody.innerHTML += `<tr class="totals-row">
+        <td><span class="totals-label">Total (${rows.length})</span></td>
+        <td></td><td></td>
+        <td class="num num-value">${rows.reduce((s,r)=>s+r.qty,0).toLocaleString()}</td>
+        <td></td><td></td>
+        <td class="num num-value">${fmt(tMV)}</td>
+      </tr>`;
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
