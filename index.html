@@ -151,14 +151,24 @@
     .cash-field label {
       font-size: 11px; color: var(--muted); white-space: nowrap; min-width: 100px;
     }
+    .cash-input-wrap {
+      display: flex; align-items: center; gap: 0;
+    }
     .cash-field input {
-      width: 90px; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 5px; padding: 5px 8px; color: var(--text);
+      width: 70px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 5px 0 0 5px; padding: 5px 6px; color: var(--text);
       font-size: 12px; outline: none; font-family: inherit;
       text-align: right; transition: border-color .2s;
     }
     .cash-field input:focus { border-color: var(--accent); }
     .cash-field input::placeholder { color: var(--muted); opacity: .6; }
+    .cash-k {
+      background: var(--surface2); border: 1px solid var(--border); border-left: none;
+      border-radius: 0 5px 5px 0; padding: 5px 6px;
+      font-size: 11px; font-weight: 700; color: var(--muted);
+    }
+    .cash-field.expense input { color: var(--red); }
+    .cash-field.revenue input { color: var(--green); }
     .up   { color: var(--green); }
     .down { color: var(--red); }
 
@@ -1120,15 +1130,24 @@
         <div class="cash-inputs">
           <div class="cash-field">
             <label>Current Account</label>
-            <input type="number" id="cashCurrent" placeholder="0" min="0" oninput="updateCash()" />
+            <div class="cash-input-wrap"><input type="number" id="cashCurrent" placeholder="0" min="0" oninput="updateCash()" /><span class="cash-k">K</span></div>
           </div>
           <div class="cash-field">
             <label>Money Market</label>
-            <input type="number" id="cashMM" placeholder="0" min="0" oninput="updateCash()" />
+            <div class="cash-input-wrap"><input type="number" id="cashMM" placeholder="0" min="0" oninput="updateCash()" /><span class="cash-k">K</span></div>
           </div>
           <div class="cash-field">
             <label>Foreign Currency</label>
-            <input type="number" id="cashFX" placeholder="0" min="0" oninput="updateCash()" />
+            <div class="cash-input-wrap"><input type="number" id="cashFX" placeholder="0" min="0" oninput="updateCash()" /><span class="cash-k">K</span></div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+          <div class="cash-field revenue">
+            <label>Expected Revenue</label>
+            <div class="cash-input-wrap"><input type="number" id="cashRevenue" placeholder="0" min="0" oninput="updateCash()" /><span class="cash-k">K</span></div>
+          </div>
+          <div class="cash-field expense">
+            <label>Expected Expenses</label>
+            <div class="cash-input-wrap"><input type="number" id="cashExpenses" placeholder="0" min="0" oninput="updateCash()" /><span class="cash-k">K</span></div>
           </div>
         </div>
       </div>
@@ -3554,24 +3573,28 @@ function toNIS(amount, fromCurrency) {
   return fromCurrency === 'NIS' ? amount : amount * fxRate;
 }
 
-/** Persist cash whenever user types */
+/** Persist cash whenever user types — all inputs are in K (thousands) */
 function updateCash() {
-  const curr = parseFloat(document.getElementById('cashCurrent')?.value) || 0;
-  const mm   = parseFloat(document.getElementById('cashMM')?.value) || 0;
-  const fx   = parseFloat(document.getElementById('cashFX')?.value) || 0;
-  const total = curr + mm + fx;
+  const curr    = (parseFloat(document.getElementById('cashCurrent')?.value) || 0) * 1000;
+  const mm      = (parseFloat(document.getElementById('cashMM')?.value) || 0) * 1000;
+  const fx      = (parseFloat(document.getElementById('cashFX')?.value) || 0) * 1000;
+  const revenue = (parseFloat(document.getElementById('cashRevenue')?.value) || 0) * 1000;
+  const expenses= (parseFloat(document.getElementById('cashExpenses')?.value) || 0) * 1000;
+  const total = curr + mm + fx + revenue - expenses;
   cashNIS = total;
   // Update displays
   const cur = displayCurrency === 'NIS' ? '₪' : '$';
   const dispVal = displayCurrency === 'NIS' ? total : (fxRate ? total / fxRate : total);
-  const fmtCash = dispVal >= 1000 ? cur + (dispVal/1000).toFixed(1) + 'K' : cur + Math.round(dispVal).toLocaleString();
+  const fmtCash = Math.abs(dispVal) >= 1000 ? cur + (dispVal/1000).toFixed(1) + 'K' : cur + Math.round(dispVal).toLocaleString();
   document.getElementById('cashTotal').textContent = fmtCash;
   const ref = document.getElementById('cashRefDisplay');
   if (ref) ref.textContent = fmtCash;
-  // Save to localStorage
-  localStorage.setItem('cashCurrent', curr.toString());
-  localStorage.setItem('cashMM', mm.toString());
-  localStorage.setItem('cashFX', fx.toString());
+  // Save to localStorage (store the K values as entered)
+  localStorage.setItem('cashCurrent', (curr/1000).toString());
+  localStorage.setItem('cashMM', (mm/1000).toString());
+  localStorage.setItem('cashFX', (fx/1000).toString());
+  localStorage.setItem('cashRevenue', (revenue/1000).toString());
+  localStorage.setItem('cashExpenses', (expenses/1000).toString());
   // Refresh widgets that use cash
   renderCharts();
 }
@@ -3581,18 +3604,21 @@ function restoreCash() {
     { id: 'cashCurrent', key: 'cashCurrent' },
     { id: 'cashMM',      key: 'cashMM' },
     { id: 'cashFX',      key: 'cashFX' },
+    { id: 'cashRevenue',  key: 'cashRevenue' },
+    { id: 'cashExpenses', key: 'cashExpenses' },
   ];
   fields.forEach(f => {
     const v = parseFloat(localStorage.getItem(f.key)) || 0;
     const el = document.getElementById(f.id);
     if (el && v > 0) el.value = v;
   });
-  // Migrate from old single cash value
+  // Migrate from old single cash value (was in NIS, now in K)
   const oldCash = parseFloat(localStorage.getItem('portfolioCashNIS')) || 0;
   if (oldCash > 0 && !localStorage.getItem('cashCurrent')) {
+    const kVal = oldCash / 1000;
     const el = document.getElementById('cashCurrent');
-    if (el) el.value = oldCash;
-    localStorage.setItem('cashCurrent', oldCash.toString());
+    if (el) el.value = kVal;
+    localStorage.setItem('cashCurrent', kVal.toString());
     localStorage.removeItem('portfolioCashNIS');
   }
   updateCash();
