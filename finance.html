@@ -530,6 +530,7 @@ function loadCSVFile(file) {
     localStorage.setItem('finance_tx', JSON.stringify(tx));
     buildState();
     renderAll();
+    syncCSVToServer(tx);
   };
   reader.readAsText(file, 'UTF-8');
 }
@@ -824,25 +825,33 @@ function renderTxView() {
 // ════════════════════════════════════════════
 // BANK AUTO-CONNECT
 // ════════════════════════════════════════════
-const BANK_SERVER = 'http://localhost:3001';
+
+// When served directly from the local server (http://localhost:3001), use relative paths.
+// When on GitHub Pages (HTTPS), call http://localhost:3001 (Chrome allows HTTPS→HTTP for localhost).
+const IS_LOCAL    = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BANK_SERVER = IS_LOCAL ? '' : 'http://localhost:3001';
 
 async function checkBankServer() {
   try {
-    const res = await fetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
-    if (res.ok) {
-      document.getElementById('statusDot').classList.add('on');
-      document.getElementById('statusTxt').textContent = 'שרת בנק מחובר';
-      document.getElementById('btnRefresh').style.display = 'flex';
+    const res  = await fetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
+    if (!res.ok) return;
+    const data = await res.json();
+    document.getElementById('statusDot').classList.add('on');
+    document.getElementById('statusTxt').textContent = data.configured
+      ? `מחובר (${data.scrapers.join(', ')})`
+      : 'שרת פעיל — הגדר פרטי בנק';
+    document.getElementById('btnRefresh').style.display = data.configured ? 'flex' : 'none';
+
+    // If served locally and no localStorage data yet → auto-load from server
+    if (IS_LOCAL && !allTx.length && data.txCount > 0) {
+      await loadFromServer(false);
     }
-  } catch { /* not running */ }
+  } catch { /* server not running */ }
 }
 
-async function refreshFromBank() {
-  const btn = document.getElementById('btnRefresh');
-  btn.textContent = '⏳ מרענן...';
-  btn.disabled = true;
+async function loadFromServer(showSpinner = true) {
   try {
-    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(120000) });
+    const res  = await fetch(BANK_SERVER + '/api/transactions', { signal: AbortSignal.timeout(5000) });
     const data = await res.json();
     if (data.transactions?.length) {
       allTx = data.transactions;
@@ -850,14 +859,43 @@ async function refreshFromBank() {
       buildState();
       buildTxFilters();
       renderAll();
+    }
+  } catch { /* ignore */ }
+}
+
+async function refreshFromBank() {
+  const btn = document.getElementById('btnRefresh');
+  btn.textContent = '⏳ מרענן...';
+  btn.disabled = true;
+  try {
+    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(180000) });
+    const data = await res.json();
+    if (data.ok && data.transactions?.length) {
+      allTx = data.transactions;
+      localStorage.setItem('finance_tx', JSON.stringify(allTx));
+      buildState();
+      buildTxFilters();
+      renderAll();
       btn.textContent = '✅ עודכן!';
     } else {
-      btn.textContent = '⚠️ אין נתונים';
+      btn.textContent = data.error ? '❌ ' + data.error.slice(0, 30) : '⚠️ אין נתונים';
     }
-  } catch {
-    btn.textContent = '❌ שגיאה';
+  } catch (e) {
+    btn.textContent = e.name === 'TimeoutError' ? '⏱ timeout' : '❌ שגיאה';
   }
-  setTimeout(() => { btn.textContent = '🔄 רענן'; btn.disabled = false; }, 3000);
+  setTimeout(() => { btn.textContent = '🔄 רענן'; btn.disabled = false; }, 4000);
+}
+
+// When CSV is loaded, also save it to the local server (if running) for persistence
+async function syncCSVToServer(tx) {
+  try {
+    await fetch(BANK_SERVER + '/api/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactions: tx }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch { /* server not running, that's fine */ }
 }
 
 // ════════════════════════════════════════════
