@@ -3715,7 +3715,15 @@ function renderGapTable() {
         </div>
       </td>
       <td>${curPct.toFixed(1)}%</td>
-      <td class="${gapCls}">${gapPct > 0 ? '+' : ''}${gapPct.toFixed(1)}%</td>
+      <td class="${gapCls}" style="${(() => {
+        const absGap = Math.abs(gapPct);
+        if (absGap < 1) return '';
+        const intensity = Math.min(absGap / 30, 1);
+        const bg = gapPct > 0
+          ? `rgba(245,101,101,${0.1 + intensity * 0.35})`
+          : `rgba(72,187,120,${0.1 + intensity * 0.35})`;
+        return `background:${bg};border-radius:4px;padding:3px 6px`;
+      })()}">${gapPct > 0 ? '+' : ''}${gapPct.toFixed(1)}%</td>
     </tr>`;
   }).join('');
 
