@@ -947,31 +947,36 @@ async function loadAccounts() {
 function renderAccounts(data) {
   const grid = document.getElementById('accountsGrid');
   const upd  = document.getElementById('accountsUpdated');
-  const accounts = data.accounts || [];
+  let accounts = data.accounts || [];
 
   if (!accounts.length) {
     grid.innerHTML = '<div class="account-no-data">לא נמצאו נתוני חשבון. לחץ "רענן" כדי למשוך מהבנק.</div>';
     return;
   }
 
-  // Compute credit card spend from allTx (current + prev month)
-  const now     = new Date();
-  const curMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-
-  const providerSpend = {};
-  allTx.filter(t => t.month === curMonth && t.amount < 0).forEach(t => {
-    const p = t.payMethod;
-    providerSpend[p] = (providerSpend[p] || 0) + Math.abs(t.amount);
+  // Deduplicate: for credit cards with same provider, keep only the one with highest monthlyCharge
+  // (the other is usually a virtual/linked shadow account)
+  const seen = {};
+  accounts = accounts.filter(a => {
+    if (a.type !== 'credit') return true;
+    const key = a.provider;
+    if (!seen[key] || (a.monthlyCharge || 0) > (seen[key].monthlyCharge || 0)) {
+      seen[key] = a;
+      return false; // will re-add from seen
+    }
+    return false;
   });
+  accounts = [...accounts, ...Object.values(seen)];
+  // Re-sort: banks first, then credit
+  accounts.sort((a, b) => (a.type === 'bank' ? -1 : 1) - (b.type === 'bank' ? -1 : 1));
 
   grid.innerHTML = accounts.map(a => {
-    const isBanked = a.type === 'bank';
+    const isBanked   = a.type === 'bank';
     const hasBalance = a.balance !== null && a.balance !== undefined;
-    const balanceVal = hasBalance ? a.balance : null;
-    const spendVal   = !isBanked ? (providerSpend[a.provider === 'isracard' ? 'isracard' : 'leumicard'] || null) : null;
-    const displayVal = hasBalance ? balanceVal : spendVal;
-    const isNeg = displayVal !== null && displayVal < 0;
-    const label = isBanked ? 'יתרת עו"ש' : (hasBalance ? 'יתרה לתשלום' : 'הוצאות החודש');
+    // For credit cards: use monthlyCharge computed server-side (sum of charges this month)
+    const displayVal = hasBalance ? a.balance : (isBanked ? null : (a.monthlyCharge ?? null));
+    const isNeg      = isBanked && displayVal !== null && displayVal < 0;
+    const label      = isBanked ? 'יתרת עו"ש' : 'הוצאות החודש הנוכחי';
     const badgeClass = isBanked ? 'badge-bank' : 'badge-credit';
     const badgeText  = isBanked ? '🏦 עו"ש' : '💳 אשראי';
 
@@ -981,12 +986,13 @@ function renderAccounts(data) {
           <span class="account-type-badge ${badgeClass}">${badgeText}</span>
           ${a.label || a.provider}
         </div>
-        ${a.accountNumber ? `<div class="account-name">חשבון ${a.accountNumber}</div>` : ''}
+        ${a.accountNumber ? `<div class="account-name">כרטיס ${a.accountNumber}</div>` : ''}
         <div class="account-balance-label">${label}</div>
-        <div class="account-balance ${displayVal === null ? '' : isNeg ? 'negative' : 'positive'}">
-          ${displayVal !== null ? '₪' + Math.abs(displayVal).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}
+        <div class="account-balance ${isBanked ? (isNeg ? 'negative' : 'positive') : 'negative'}">
+          ${displayVal !== null ? '₪' + displayVal.toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}
         </div>
         ${a.creditLimit ? `<div class="account-meta">מסגרת: ₪${a.creditLimit.toLocaleString('he-IL')}</div>` : ''}
+        ${!isBanked ? `<div class="account-meta">* סכום שנצבר החודש מפעולות שנמשכו</div>` : ''}
       </div>`;
   }).join('');
 
