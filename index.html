@@ -1092,6 +1092,12 @@
         <div id="marketIndexes"><div style="color:var(--muted);font-size:12px;padding:8px 0">Loading…</div></div>
       </div>
 
+      <!-- Asset Type Breakdown -->
+      <div class="panel">
+        <div class="panel-title">Asset Breakdown</div>
+        <div id="assetBreakdown"></div>
+      </div>
+
       <!-- Country Split with expandable segments -->
       <div class="panel">
         <div class="panel-title">Country Split</div>
@@ -1939,6 +1945,62 @@ const expandedSubSegments = new Set();
 
 function renderCharts() {
   const all = PORTFOLIO.map(computeRow);
+
+  // ── Asset Type Breakdown (ETF / Stocks / Bitcoin / Cash) ──
+  {
+    const types = [
+      { key: 'Stock',   label: 'Stocks',  icon: '📊', color: '#818cf8' },
+      { key: 'ETF',     label: 'ETFs',    icon: '📈', color: '#34d399' },
+      { key: 'Bitcoin', label: 'Bitcoin', icon: '₿',  color: '#f7931a' },
+    ];
+    const cashVal = parseFloat(document.getElementById('cashInput')?.value) || 0;
+    const cur = displayCurrency === 'NIS' ? '₪' : '$';
+    const abFmt = v => v >= 1000 ? cur + (v/1000).toFixed(1) + 'K' : cur + v.toFixed(0);
+    const typeMap = {};
+    all.forEach(r => {
+      // Map Bitcoin segment to Bitcoin type
+      const t = r.segment === 'Bitcoin' ? 'Bitcoin' : r.type;
+      typeMap[t] = (typeMap[t] || 0) + r.marketValue;
+    });
+    const grandTotal = types.reduce((s, t) => s + (typeMap[t.key] || 0), 0) + cashVal;
+
+    let html = '';
+    types.forEach(t => {
+      const val = typeMap[t.key] || 0;
+      if (!val) return;
+      const pct = grandTotal ? (val / grandTotal * 100).toFixed(1) : '0.0';
+      html += `<div class="alloc-row" style="cursor:default">
+        <div class="alloc-left">
+          <div class="alloc-dot" style="background:${t.color}"></div>
+          <span>${t.icon} ${t.label}</span>
+        </div>
+        <div class="alloc-bar-wrap">
+          <div class="alloc-bar" style="width:${pct}%;background:${t.color}"></div>
+        </div>
+        <span style="color:var(--muted);font-size:11px;min-width:40px;text-align:right">${pct}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:0 4px 6px 22px;font-size:11px;color:var(--muted)">
+        <span>${abFmt(val)}</span>
+      </div>`;
+    });
+    if (cashVal > 0) {
+      const pct = grandTotal ? (cashVal / grandTotal * 100).toFixed(1) : '0.0';
+      html += `<div class="alloc-row" style="cursor:default">
+        <div class="alloc-left">
+          <div class="alloc-dot" style="background:#a0aec0"></div>
+          <span>💵 Cash</span>
+        </div>
+        <div class="alloc-bar-wrap">
+          <div class="alloc-bar" style="width:${pct}%;background:#a0aec0"></div>
+        </div>
+        <span style="color:var(--muted);font-size:11px;min-width:40px;text-align:right">${pct}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:0 4px 6px 22px;font-size:11px;color:var(--muted)">
+        <span>₪${cashVal.toLocaleString()}</span>
+      </div>`;
+    }
+    document.getElementById('assetBreakdown').innerHTML = html;
+  }
 
   // ── Country Split with multi-level drill-down ──
   const CS_ORDER  = ['USA','IL','Europe','Bitcoin'];
