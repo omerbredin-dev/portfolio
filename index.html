@@ -140,6 +140,46 @@
     .card-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
     .card-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
     .card-sub   { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+    /* ── Cash Widget ── */
+    .cash-widget {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 20px;
+      margin-bottom: 20px; position: relative; overflow: hidden;
+    }
+    .cash-widget::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: linear-gradient(90deg, #a0aec0, #68d391);
+    }
+    .cash-widget-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .cash-widget-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .8px;
+      color: var(--muted); display: flex; align-items: center; gap: 6px;
+    }
+    .cash-widget-total {
+      font-size: 20px; font-weight: 700; color: var(--text);
+    }
+    .cash-inputs {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .cash-field {
+      flex: 1; min-width: 140px;
+    }
+    .cash-field label {
+      display: block; font-size: 10px; font-weight: 600;
+      color: var(--muted); margin-bottom: 4px; letter-spacing: .3px;
+    }
+    .cash-field input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 7px 10px; color: var(--text);
+      font-size: 13px; outline: none; font-family: inherit;
+      transition: border-color .2s;
+    }
+    .cash-field input:focus { border-color: var(--accent); }
+    .cash-field input::placeholder { color: var(--muted); opacity: .6; }
     .up   { color: var(--green); }
     .down { color: var(--red); }
 
@@ -1025,6 +1065,28 @@
     </div>
   </div>
 
+  <!-- Cash Widget -->
+  <div class="cash-widget">
+    <div class="cash-widget-header">
+      <div class="cash-widget-title">💵 Cash Holdings</div>
+      <div class="cash-widget-total" id="cashTotal">₪0</div>
+    </div>
+    <div class="cash-inputs">
+      <div class="cash-field">
+        <label>Current Account (₪)</label>
+        <input type="number" id="cashCurrent" placeholder="0" min="0" oninput="updateCash()" />
+      </div>
+      <div class="cash-field">
+        <label>Money Market Fund (₪)</label>
+        <input type="number" id="cashMM" placeholder="0" min="0" oninput="updateCash()" />
+      </div>
+      <div class="cash-field">
+        <label>Foreign Currency (₪)</label>
+        <input type="number" id="cashFX" placeholder="0" min="0" oninput="updateCash()" />
+      </div>
+    </div>
+  </div>
+
   <!-- Filters -->
   <div class="filters">
     <span class="filter-label">Country</span>
@@ -1110,12 +1172,10 @@
           Target Allocation
           <button class="tgt-reset-btn" onclick="resetTargets()" title="Reset to defaults">↺ Reset</button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Use ▲▼ in the TARGET column to adjust. Cash isn't tracked — enter it below to analyze gaps.</div>
-
-        <!-- Cash input + gap analysis -->
-        <label style="font-size:11px;font-weight:600;color:var(--text)">Cash in hand (₪)</label>
-        <div class="cash-panel-input" style="margin-top:4px">
-          <input class="cash-input" type="number" id="cashInput" placeholder="e.g. 50000" min="0" oninput="saveCash()" />
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Use ▲▼ in the TARGET column to adjust. Cash is set in the Cash Holdings widget above.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--muted)">Cash in hand:</span>
+          <strong style="font-size:13px;color:var(--text)" id="cashRefDisplay">₪0</strong>
           <button class="analyze-btn" onclick="analyzeGaps()">📊 Analyze</button>
         </div>
         <div id="gapAnalysis" style="margin-top:4px"></div>
@@ -1953,7 +2013,7 @@ function renderCharts() {
       { key: 'ETF',     label: 'ETFs',    icon: '📈', color: '#34d399' },
       { key: 'Bitcoin', label: 'Bitcoin', icon: '₿',  color: '#f7931a' },
     ];
-    const cashVal = parseFloat(document.getElementById('cashInput')?.value) || 0;
+    const cashVal = cashNIS || 0;
     const cur = displayCurrency === 'NIS' ? '₪' : '$';
     const abFmt = v => v >= 1000 ? cur + (v/1000).toFixed(1) + 'K' : cur + v.toFixed(0);
     const typeMap = {};
@@ -3516,10 +3576,47 @@ function toNIS(amount, fromCurrency) {
 }
 
 /** Persist cash whenever user types */
-function saveCash() {
-  const v = parseFloat(document.getElementById('cashInput')?.value) || 0;
-  cashNIS = v;
-  localStorage.setItem('portfolioCashNIS', v.toString());
+function updateCash() {
+  const curr = parseFloat(document.getElementById('cashCurrent')?.value) || 0;
+  const mm   = parseFloat(document.getElementById('cashMM')?.value) || 0;
+  const fx   = parseFloat(document.getElementById('cashFX')?.value) || 0;
+  const total = curr + mm + fx;
+  cashNIS = total;
+  // Update displays
+  const cur = displayCurrency === 'NIS' ? '₪' : '$';
+  const dispVal = displayCurrency === 'NIS' ? total : (fxRate ? total / fxRate : total);
+  const fmtCash = dispVal >= 1000 ? cur + (dispVal/1000).toFixed(1) + 'K' : cur + Math.round(dispVal).toLocaleString();
+  document.getElementById('cashTotal').textContent = fmtCash;
+  const ref = document.getElementById('cashRefDisplay');
+  if (ref) ref.textContent = fmtCash;
+  // Save to localStorage
+  localStorage.setItem('cashCurrent', curr.toString());
+  localStorage.setItem('cashMM', mm.toString());
+  localStorage.setItem('cashFX', fx.toString());
+  // Refresh widgets that use cash
+  renderCharts();
+}
+
+function restoreCash() {
+  const fields = [
+    { id: 'cashCurrent', key: 'cashCurrent' },
+    { id: 'cashMM',      key: 'cashMM' },
+    { id: 'cashFX',      key: 'cashFX' },
+  ];
+  fields.forEach(f => {
+    const v = parseFloat(localStorage.getItem(f.key)) || 0;
+    const el = document.getElementById(f.id);
+    if (el && v > 0) el.value = v;
+  });
+  // Migrate from old single cash value
+  const oldCash = parseFloat(localStorage.getItem('portfolioCashNIS')) || 0;
+  if (oldCash > 0 && !localStorage.getItem('cashCurrent')) {
+    const el = document.getElementById('cashCurrent');
+    if (el) el.value = oldCash;
+    localStorage.setItem('cashCurrent', oldCash.toString());
+    localStorage.removeItem('portfolioCashNIS');
+  }
+  updateCash();
 }
 
 /** Run gap analysis against TARGET_ALLOCATION — computes data then delegates to renderGapTable() */
@@ -4990,13 +5087,9 @@ async function sendChatMessage() {
   // Auto-refresh ON by default during market hours
   if (localStorage.getItem('portfolioAutoRefresh') !== '0') toggleAutoRefresh();
 
-  // Restore saved cash and auto-run gap analysis if cash was previously entered
-  const _savedCash = parseFloat(localStorage.getItem('portfolioCashNIS')) || 0;
-  if (_savedCash > 0) {
-    cashNIS = _savedCash;
-    const _ci = document.getElementById('cashInput');
-    if (_ci) _ci.value = _savedCash;
-    // Small delay to ensure fxRate is loaded before computing NIS values
+  // Restore saved cash inputs and auto-run gap analysis
+  restoreCash();
+  if (cashNIS > 0) {
     setTimeout(analyzeGaps, 800);
   }
 })();
