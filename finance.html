@@ -162,6 +162,24 @@
     .view { display: none; }
     .view.active { display: block; }
 
+    /* ── Accounts view ── */
+    .accounts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .account-card  { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+    .account-provider { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .account-name  { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+    .account-balance-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .account-balance { font-size: 28px; font-weight: 800; }
+    .account-balance.positive { color: var(--income); }
+    .account-balance.negative { color: var(--expense); }
+    .account-meta  { margin-top: 12px; font-size: 11px; color: var(--muted); }
+    .account-type-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .badge-bank   { background: #E3F2FD; color: #1565C0; }
+    .badge-credit { background: #FFF3E0; color: #E65100; }
+    .accounts-updated { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
+    .accounts-refresh-btn { display: flex; align-items: center; gap: 8px; margin: 0 auto 20px; padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .accounts-refresh-btn:disabled { opacity: .6; cursor: default; }
+    .account-no-data { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+
     /* ── Responsive ── */
     @media (max-width: 680px) {
       .sum-grid { grid-template-columns: 1fr 1fr; }
@@ -196,6 +214,7 @@
       <button class="nav-btn active" onclick="switchView('dashboard',this)">תזרים</button>
       <button class="nav-btn" onclick="switchView('trends',this)">מגמות</button>
       <button class="nav-btn" onclick="switchView('transactions',this)">פעולות</button>
+      <button class="nav-btn" onclick="switchView('accounts',this)">חשבונות</button>
     </nav>
     <div class="header-right">
       <div class="status-pill" id="statusPill">
@@ -337,6 +356,15 @@
             <tbody id="monthTbody"></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- ── ACCOUNTS VIEW ── -->
+      <div id="viewAccounts" class="view">
+        <button class="accounts-refresh-btn" id="btnAccountsRefresh" onclick="refreshAccounts()">🔄 רענן נתוני חשבונות</button>
+        <div class="accounts-grid" id="accountsGrid">
+          <div class="account-no-data">לחץ "רענן נתוני חשבונות" כדי למשוך יתרות עדכניות מהבנק ומחברות האשראי</div>
+        </div>
+        <div class="accounts-updated" id="accountsUpdated"></div>
       </div>
 
       <!-- ── TRANSACTIONS VIEW ── -->
@@ -584,6 +612,7 @@ function switchView(view, btn) {
   document.getElementById('view' + view[0].toUpperCase() + view.slice(1))?.classList.add('active');
   if (view === 'trends') renderTrends();
   if (view === 'transactions') renderTxView();
+  if (view === 'accounts') loadAccounts();
 }
 
 function goTx(cat) {
@@ -902,6 +931,94 @@ async function refreshFromBank() {
     btn.textContent = e.name === 'TimeoutError' ? '⏱ timeout' : '❌ שגיאה';
   }
   setTimeout(() => { btn.textContent = '🔄 רענן'; btn.disabled = false; }, 4000);
+}
+
+// ════════════════════════════════════════════
+// ACCOUNTS
+// ════════════════════════════════════════════
+async function loadAccounts() {
+  try {
+    const res  = await fetch(BANK_SERVER + '/api/accounts', { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    renderAccounts(data);
+  } catch { /* server not running */ }
+}
+
+function renderAccounts(data) {
+  const grid = document.getElementById('accountsGrid');
+  const upd  = document.getElementById('accountsUpdated');
+  const accounts = data.accounts || [];
+
+  if (!accounts.length) {
+    grid.innerHTML = '<div class="account-no-data">לא נמצאו נתוני חשבון. לחץ "רענן" כדי למשוך מהבנק.</div>';
+    return;
+  }
+
+  // Compute credit card spend from allTx (current + prev month)
+  const now     = new Date();
+  const curMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+  const providerSpend = {};
+  allTx.filter(t => t.month === curMonth && t.amount < 0).forEach(t => {
+    const p = t.payMethod;
+    providerSpend[p] = (providerSpend[p] || 0) + Math.abs(t.amount);
+  });
+
+  grid.innerHTML = accounts.map(a => {
+    const isBanked = a.type === 'bank';
+    const hasBalance = a.balance !== null && a.balance !== undefined;
+    const balanceVal = hasBalance ? a.balance : null;
+    const spendVal   = !isBanked ? (providerSpend[a.provider === 'isracard' ? 'isracard' : 'leumicard'] || null) : null;
+    const displayVal = hasBalance ? balanceVal : spendVal;
+    const isNeg = displayVal !== null && displayVal < 0;
+    const label = isBanked ? 'יתרת עו"ש' : (hasBalance ? 'יתרה לתשלום' : 'הוצאות החודש');
+    const badgeClass = isBanked ? 'badge-bank' : 'badge-credit';
+    const badgeText  = isBanked ? '🏦 עו"ש' : '💳 אשראי';
+
+    return `
+      <div class="account-card">
+        <div class="account-provider">
+          <span class="account-type-badge ${badgeClass}">${badgeText}</span>
+          ${a.label || a.provider}
+        </div>
+        ${a.accountNumber ? `<div class="account-name">חשבון ${a.accountNumber}</div>` : ''}
+        <div class="account-balance-label">${label}</div>
+        <div class="account-balance ${displayVal === null ? '' : isNeg ? 'negative' : 'positive'}">
+          ${displayVal !== null ? '₪' + Math.abs(displayVal).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}
+        </div>
+        ${a.creditLimit ? `<div class="account-meta">מסגרת: ₪${a.creditLimit.toLocaleString('he-IL')}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  if (data.updatedAt) {
+    const d = new Date(data.updatedAt);
+    upd.textContent = `עודכן: ${d.toLocaleDateString('he-IL')} ${d.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'})}`;
+  }
+}
+
+async function refreshAccounts() {
+  const btn = document.getElementById('btnAccountsRefresh');
+  btn.textContent = '⏳ מושך נתונים... (1-2 דקות)';
+  btn.disabled = true;
+  try {
+    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(180000) });
+    const data = await res.json();
+    if (data.ok) {
+      if (data.transactions?.length) {
+        allTx = data.transactions;
+        localStorage.setItem('finance_tx', JSON.stringify(allTx));
+        buildState();
+        renderAll();
+      }
+      if (data.accounts) renderAccounts({ accounts: data.accounts, updatedAt: new Date() });
+      btn.textContent = '✅ עודכן!';
+    } else {
+      btn.textContent = data.error ? '❌ ' + data.error.slice(0, 40) : '⚠️ שגיאה';
+    }
+  } catch (e) {
+    btn.textContent = e.name === 'TimeoutError' ? '⏱ timeout' : '❌ שגיאה';
+  }
+  setTimeout(() => { btn.textContent = '🔄 רענן נתוני חשבונות'; btn.disabled = false; }, 5000);
 }
 
 // When CSV is loaded, also save it to the local server (if running) for persistence
