@@ -368,6 +368,15 @@
 
 <script>
 // ════════════════════════════════════════════
+// STATE (must be first — init() is called early)
+// ════════════════════════════════════════════
+let allTx      = [];
+let months     = [];
+let curIdx     = 0;
+let donutInst  = null;
+let trendInst  = null;
+
+// ════════════════════════════════════════════
 // PASSWORD
 // ════════════════════════════════════════════
 const PW_HASH = 'ab66bd48c30449aed11791f3e78752efb223549f8cc5a9842937d19292311c88';
@@ -508,15 +517,6 @@ function splitCSVLine(line) {
   res.push(cur);
   return res;
 }
-
-// ════════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════════
-let allTx      = [];
-let months     = [];
-let curIdx     = 0;
-let donutInst  = null;
-let trendInst  = null;
 
 // ════════════════════════════════════════════
 // FILE LOADING
