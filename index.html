@@ -169,6 +169,19 @@
     }
     .cash-field.expense input { color: var(--red); }
     .cash-field.revenue input { color: var(--green); }
+
+    /* ── Today's Highlights ── */
+    .highlight-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px; line-height: 1.5;
+    }
+    .highlight-item:last-child { border-bottom: none; }
+    .highlight-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .highlight-text { color: var(--text); }
+    .highlight-text strong { font-weight: 700; }
+    .highlight-text .hl-up { color: var(--green); font-weight: 700; }
+    .highlight-text .hl-down { color: var(--red); font-weight: 700; }
     .up   { color: var(--green); }
     .down { color: var(--red); }
 
@@ -1115,6 +1128,12 @@
     </div>
 
     <div class="side-panel">
+      <!-- Today's Highlights -->
+      <div class="panel">
+        <div class="panel-title">📋 Today's Highlights</div>
+        <div id="todayHighlights"><div style="color:var(--muted);font-size:12px;padding:8px 0">Loading…</div></div>
+      </div>
+
       <!-- Market Indexes -->
       <div class="panel">
         <div class="panel-title">Market Indexes</div>
@@ -1835,7 +1854,7 @@ function renderTable() {
   document.getElementById('rowCount').textContent = rows.length + ' asset' + (rows.length !== 1 ? 's' : '');
 
   const isPerf = (tableView === 'performance');
-  const colCount = isPerf ? 6 : 7;
+  const colCount = isPerf ? 7 : 7;
 
   // Render thead
   if (isPerf) {
@@ -1844,6 +1863,7 @@ function renderTable() {
       <th class="num" onclick="sortBy('marketValue')">Market Value</th>
       <th class="num" onclick="sortBy('gainAbs')">Gain / Loss</th>
       <th class="num" onclick="sortBy('gainPct')">Return %</th>
+      <th class="num" onclick="sortBy('dailyGain')">Daily +/-</th>
       <th class="num" onclick="sortBy('dailyChangePct')">Daily %</th>
       <th class="num" onclick="sortBy('portfolioPct')">Portfolio %</th>
     </tr>`;
@@ -1868,6 +1888,8 @@ function renderTable() {
 
   tbody.innerHTML = rows.map(r => {
     const up = r.gainAbs >= 0;
+    const dailyGain = r.marketValue - r.marketValue / (1 + (r.dailyChangePct || 0) / 100);
+    r.dailyGain = dailyGain;
     const dayUp = r.dailyChangePct >= 0;
     const flag = r.country === 'USA' ? '🇺🇸' : '🇮🇱';
     const badgeClass = 'badge-' + r.type.toLowerCase();
@@ -1894,6 +1916,7 @@ function renderTable() {
       <td class="num num-value">${fmt(r.marketValue)}</td>
       <td class="num"><span class="${changeClass}" style="font-weight:600">${up?'+':''}${fmt(r.gainAbs)}</span></td>
       <td class="num"><span class="change-pill ${changeClass}">${arrow} ${Math.abs(r.gainPct).toFixed(1)}%</span></td>
+      <td class="num"><span class="${dayClass}" style="font-weight:600">${dayUp?'+':''}${fmt(dailyGain)}</span></td>
       <td class="num"><span class="change-pill ${dayClass}">${dayArrow} ${Math.abs(r.dailyChangePct).toFixed(2)}%</span></td>
       <td class="num" style="color:var(--muted);font-size:12px">${portfolioPct}%</td>`;
     } else {
@@ -1922,11 +1945,14 @@ function renderTable() {
     const dayUp = tDailyPct >= 0;
 
     if (isPerf) {
+      const tDailyGain = rows.reduce((s, r) => s + (r.dailyGain || 0), 0);
+      const tDayGainUp = tDailyGain >= 0;
       tbody.innerHTML += `<tr class="totals-row">
         <td><span class="totals-label">Total (${rows.length})</span></td>
         <td class="num num-value">${fmt(tMV)}</td>
         <td class="num"><span class="${up?'up':'down'}" style="font-weight:600">${up?'+':''}${fmt(tGain)}</span></td>
         <td class="num"><span class="change-pill ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(tGainPct).toFixed(1)}%</span></td>
+        <td class="num"><span class="${tDayGainUp?'up':'down'}" style="font-weight:600">${tDayGainUp?'+':''}${fmt(tDailyGain)}</span></td>
         <td class="num"><span class="change-pill ${dayUp?'up':'down'}">${dayUp?'▲':'▼'} ${Math.abs(tDailyPct).toFixed(2)}%</span></td>
         <td class="num" style="font-size:12px;color:var(--accent);font-weight:700">${tPortPct.toFixed(1)}%</td>
       </tr>`;
@@ -2000,6 +2026,78 @@ const SEGMENT_ICONS = {
 // Tracks which country/sub-segment rows are expanded
 const expandedCountries = new Set();
 const expandedSubSegments = new Set();
+
+function renderTodayHighlights() {
+  const el = document.getElementById('todayHighlights');
+  if (!el) return;
+  const rows = PORTFOLIO.map(computeRow).filter(r => r.marketValue > 0);
+  if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No data yet</div>'; return; }
+
+  // Compute daily gain for each
+  rows.forEach(r => {
+    r.dailyGain = r.marketValue - r.marketValue / (1 + (r.dailyChangePct || 0) / 100);
+  });
+
+  const highlights = [];
+  const totalDailyGain = rows.reduce((s, r) => s + r.dailyGain, 0);
+  const totalMV = rows.reduce((s, r) => s + r.marketValue, 0);
+  const totalDailyPct = totalMV ? totalDailyGain / (totalMV - totalDailyGain) * 100 : 0;
+
+  // 1. Overall portfolio summary
+  const pUp = totalDailyGain >= 0;
+  highlights.push({
+    icon: pUp ? '📈' : '📉',
+    text: `Portfolio <span class="${pUp?'hl-up':'hl-down'}">${pUp?'+':''}${fmt(totalDailyGain)}</span> today <span class="${pUp?'hl-up':'hl-down'}">(${pUp?'+':''}${totalDailyPct.toFixed(2)}%)</span>`
+  });
+
+  // 2-3. Biggest winner & loser by absolute daily gain
+  const sorted = [...rows].sort((a, b) => b.dailyGain - a.dailyGain);
+  const winner = sorted[0];
+  const loser = sorted[sorted.length - 1];
+  const isIL = r => r.exchange === 'TASE';
+  const label = r => isIL(r) ? r.name : r.symbol;
+
+  if (winner && winner.dailyGain > 0) {
+    highlights.push({
+      icon: '🟢',
+      text: `<strong>${label(winner)}</strong> best performer: <span class="hl-up">+${fmt(winner.dailyGain)}</span> <span class="hl-up">(+${Math.abs(winner.dailyChangePct).toFixed(2)}%)</span>`
+    });
+  }
+  if (loser && loser.dailyGain < 0) {
+    highlights.push({
+      icon: '🔴',
+      text: `<strong>${label(loser)}</strong> biggest drop: <span class="hl-down">${fmt(loser.dailyGain)}</span> <span class="hl-down">(${loser.dailyChangePct.toFixed(2)}%)</span>`
+    });
+  }
+
+  // 4. Segment summary — which segment moved most
+  const segments = {};
+  rows.forEach(r => {
+    const seg = r.segment === 'US Stocks' || r.segment === 'USA ETF' ? r.segment : r.segment;
+    const country = (r.segment === 'US Stocks' || r.segment === 'USA ETF') ? 'US' : r.segment === 'IL' ? 'IL' : r.segment === 'Europe' ? 'Europe' : r.segment;
+    if (!segments[country]) segments[country] = { gain: 0, mv: 0 };
+    segments[country].gain += r.dailyGain;
+    segments[country].mv += r.marketValue;
+  });
+  const segEntries = Object.entries(segments).map(([k, v]) => ({ name: k, gain: v.gain, pct: v.mv ? v.gain / (v.mv - v.gain) * 100 : 0 }));
+  segEntries.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
+  const topSeg = segEntries[0];
+  if (topSeg && Math.abs(topSeg.pct) >= 0.01) {
+    const sUp = topSeg.gain >= 0;
+    const segIcons = { US: '🇺🇸', IL: '🇮🇱', Europe: '🇪🇺', Bitcoin: '₿' };
+    highlights.push({
+      icon: segIcons[topSeg.name] || '🌍',
+      text: `<strong>${topSeg.name}</strong> segment <span class="${sUp?'hl-up':'hl-down'}">${sUp?'+':''}${topSeg.pct.toFixed(2)}%</span> today (<span class="${sUp?'hl-up':'hl-down'}">${sUp?'+':''}${fmt(topSeg.gain)}</span>)`
+    });
+  }
+
+  el.innerHTML = highlights.map(h =>
+    `<div class="highlight-item">
+      <span class="highlight-icon">${h.icon}</span>
+      <span class="highlight-text">${h.text}</span>
+    </div>`
+  ).join('');
+}
 
 function renderCharts() {
   const all = PORTFOLIO.map(computeRow);
@@ -4723,6 +4821,7 @@ function renderAll() {
   renderCards();
   renderTable();
   renderCharts();
+  renderTodayHighlights();
   generateInsights();
   generateWatchlist();
   updateClearBtn();
