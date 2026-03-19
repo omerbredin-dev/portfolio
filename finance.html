@@ -220,6 +220,15 @@
         <div style="font-size:12px;margin-top:4px">או לחץ לבחירת קובץ</div>
       </div>
       <button class="btn-upload-main" onclick="triggerCSV()">בחר קובץ CSV מ-RiseUp</button>
+      <div id="bankBtnWrap" style="display:none;margin-top:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px;color:var(--muted);font-size:12px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span>או</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <button class="btn-upload-main" style="background:#00BFA5" onclick="refreshFromBank()">🏦 משוך נתונים מהבנק</button>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px" id="bankBtnStatus"></div>
+      </div>
     </div>
   </div>
 
@@ -841,6 +850,12 @@ async function checkBankServer() {
       ? `מחובר (${data.scrapers.join(', ')})`
       : 'שרת פעיל — הגדר פרטי בנק';
     document.getElementById('btnRefresh').style.display = data.configured ? 'flex' : 'none';
+    // Also show bank button on upload screen
+    if (data.configured) {
+      document.getElementById('bankBtnWrap').style.display = 'block';
+      document.getElementById('bankBtnStatus').textContent =
+        `מחובר: ${data.scrapers.join(', ')} · לוחץ ימשוך נתונים מהבנק (1-2 דקות)`;
+    }
 
     // If served locally and no localStorage data yet → auto-load from server
     if (IS_LOCAL && !allTx.length && data.txCount > 0) {
