@@ -377,6 +377,12 @@ let donutInst  = null;
 let trendInst  = null;
 
 // ════════════════════════════════════════════
+// BANK SERVER (must be before IIFE / init)
+// ════════════════════════════════════════════
+const IS_LOCAL    = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BANK_SERVER = IS_LOCAL ? '' : 'http://localhost:3001';
+
+// ════════════════════════════════════════════
 // PASSWORD
 // ════════════════════════════════════════════
 const PW_HASH = 'ab66bd48c30449aed11791f3e78752efb223549f8cc5a9842937d19292311c88';
@@ -837,9 +843,6 @@ function renderTxView() {
 
 // When served directly from the local server (http://localhost:3001), use relative paths.
 // When on GitHub Pages (HTTPS), call http://localhost:3001 (Chrome allows HTTPS→HTTP for localhost).
-const IS_LOCAL    = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const BANK_SERVER = IS_LOCAL ? '' : 'http://localhost:3001';
-
 async function checkBankServer() {
   try {
     const res  = await fetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
