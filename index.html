@@ -1119,12 +1119,36 @@
         <div class="return-method-toggle">
           <button class="method-btn chart-sub-btn active" data-sub="sunburst" onclick="setChartsSubView('sunburst')">🍩 Sunburst</button>
           <button class="method-btn chart-sub-btn" data-sub="heatmap" onclick="setChartsSubView('heatmap')">🗺️ World Map</button>
+          <button class="method-btn chart-sub-btn" data-sub="prediction" onclick="setChartsSubView('prediction')">🔮 Prediction</button>
         </div>
       </div>
       <!-- Sunburst view -->
       <div id="sunburstView" style="display:none;padding:20px 8px;width:100%"></div>
       <!-- Heatmap view -->
       <div id="heatmapView" style="display:none;padding:12px 8px;width:100%"></div>
+      <!-- Prediction view -->
+      <div id="predictionView" style="display:none;padding:20px 16px;width:100%">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="font-size:12px;color:var(--muted);white-space:nowrap">Starting Value</label>
+            <span id="predStartVal" style="font-size:14px;font-weight:700;color:var(--text)">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="predReturn" style="font-size:12px;color:var(--muted);white-space:nowrap">Annual Return %</label>
+            <input type="number" id="predReturn" value="8" min="-50" max="100" step="0.5" style="width:64px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;text-align:center" oninput="renderPrediction()">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="predYears" style="font-size:12px;color:var(--muted);white-space:nowrap">Years</label>
+            <input type="number" id="predYears" value="10" min="1" max="50" step="1" style="width:56px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;text-align:center" oninput="renderPrediction()">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="predMonthly" style="font-size:12px;color:var(--muted);white-space:nowrap">Monthly Add</label>
+            <input type="number" id="predMonthly" value="0" min="0" step="500" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;text-align:center" oninput="renderPrediction()">
+          </div>
+        </div>
+        <div id="predSummary" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px"></div>
+        <canvas id="predictionChart" height="90"></canvas>
+      </div>
     </div>
 
     <div class="side-panel">
@@ -1447,15 +1471,20 @@ function setChartsSubView(sub) {
   chartsSubView = sub;
   const sbView = document.getElementById('sunburstView');
   const hmView = document.getElementById('heatmapView');
+  const prView = document.getElementById('predictionView');
   document.querySelectorAll('.chart-sub-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+  if (sbView) sbView.style.display = 'none';
+  if (hmView) hmView.style.display = 'none';
+  if (prView) prView.style.display = 'none';
   if (sub === 'sunburst') {
     if (sbView) sbView.style.display = 'block';
-    if (hmView) hmView.style.display = 'none';
     renderSunburst();
-  } else {
-    if (sbView) sbView.style.display = 'none';
+  } else if (sub === 'heatmap') {
     if (hmView) hmView.style.display = 'block';
     renderHeatmap();
+  } else if (sub === 'prediction') {
+    if (prView) prView.style.display = 'block';
+    renderPrediction();
   }
 }
 
@@ -1466,6 +1495,7 @@ function setTableView(view) {
   const tableEl = document.querySelector('.table-wrap table');
   const sbView  = document.getElementById('sunburstView');
   const hmView  = document.getElementById('heatmapView');
+  const prView  = document.getElementById('predictionView');
   const rcWrap  = document.getElementById('returnChartWrap');
   const rcEl    = document.getElementById('rowCount');
   const chartToggle = document.getElementById('chartSubToggle');
@@ -1475,6 +1505,7 @@ function setTableView(view) {
   grid?.classList.remove('sunburst-mode', 'heatmap-mode');
   if (sbView) sbView.style.display = 'none';
   if (hmView) hmView.style.display = 'none';
+  if (prView) prView.style.display = 'none';
   if (chartToggle) chartToggle.style.display = 'none';
 
   // Populate the return chart wrapper once (lazy init)
@@ -2626,6 +2657,152 @@ function renderReturnChart() {
       scales: {
         x: { grid: { color: gridCol }, ticks: { color: tickCol, maxTicksLimit: 8, font: { size: 10 } } },
         y: { grid: { color: gridCol }, ticks: { color: tickCol, callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// Portfolio Prediction
+// ─────────────────────────────────────────────
+let predictionChart = null;
+
+function renderPrediction() {
+  const all = PORTFOLIO.map(computeRow);
+  const totalNow = all.reduce((s, r) => s + r.marketValue, 0) + (cashNIS || 0);
+  const cur = displayCurrency === 'NIS' ? '₪' : '$';
+  const dispTotal = displayCurrency === 'NIS' ? totalNow : (fxRate ? totalNow / fxRate : totalNow);
+
+  // Show starting value
+  const startEl = document.getElementById('predStartVal');
+  if (startEl) startEl.textContent = cur + Math.round(dispTotal).toLocaleString();
+
+  const annualReturn = parseFloat(document.getElementById('predReturn')?.value) || 8;
+  const years = Math.min(parseInt(document.getElementById('predYears')?.value) || 10, 50);
+  const monthlyAdd = parseFloat(document.getElementById('predMonthly')?.value) || 0;
+
+  // Monthly return rate
+  const monthlyRate = Math.pow(1 + annualReturn / 100, 1 / 12) - 1;
+  const totalMonths = years * 12;
+
+  // Build data points — one per month
+  const labels = [];
+  const values = [];
+  const contributions = [];
+  let currentVal = dispTotal;
+  let totalContrib = dispTotal;
+
+  for (let m = 0; m <= totalMonths; m++) {
+    if (m % (years <= 5 ? 1 : years <= 15 ? 3 : 6) === 0 || m === totalMonths) {
+      const yr = Math.floor(m / 12);
+      const mo = m % 12;
+      if (m === 0) labels.push('Today');
+      else if (mo === 0) labels.push(`Year ${yr}`);
+      else labels.push(`Y${yr}+${mo}m`);
+      values.push(Math.round(currentVal));
+      contributions.push(Math.round(totalContrib));
+    }
+    if (m < totalMonths) {
+      currentVal = currentVal * (1 + monthlyRate) + monthlyAdd;
+      totalContrib += monthlyAdd;
+    }
+  }
+
+  const finalVal = values[values.length - 1];
+  const totalContribFinal = contributions[contributions.length - 1];
+  const totalGrowth = finalVal - totalContribFinal;
+  const growthPct = totalContribFinal > 0 ? ((finalVal / totalContribFinal - 1) * 100) : 0;
+  const multiplier = dispTotal > 0 ? (finalVal / dispTotal) : 0;
+
+  // Summary cards
+  const summaryEl = document.getElementById('predSummary');
+  if (summaryEl) {
+    const fmtK = v => Math.abs(v) >= 1000000 ? cur + (v/1000000).toFixed(1) + 'M' : Math.abs(v) >= 1000 ? cur + (v/1000).toFixed(0) + 'K' : cur + Math.round(v).toLocaleString();
+    summaryEl.innerHTML = `
+      <div style="flex:1;min-width:100px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Projected Value</div>
+        <div style="font-size:16px;font-weight:700;color:var(--green)">${fmtK(finalVal)}</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Total Contributions</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">${fmtK(totalContribFinal)}</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Growth</div>
+        <div style="font-size:16px;font-weight:700;color:var(--accent)">${fmtK(totalGrowth)} (${growthPct.toFixed(0)}%)</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Multiplier</div>
+        <div style="font-size:16px;font-weight:700;color:var(--accent)">${multiplier.toFixed(1)}x</div>
+      </div>
+    `;
+  }
+
+  // Chart
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridCol = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const tickCol = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+
+  if (predictionChart) predictionChart.destroy();
+  const canvas = document.getElementById('predictionChart');
+  if (!canvas) return;
+
+  predictionChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Projected Value',
+          data: values,
+          borderColor: '#5c7cfa',
+          backgroundColor: 'rgba(92,124,250,0.12)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          pointHoverRadius: 6,
+          borderWidth: 2.5
+        },
+        {
+          label: 'Contributions',
+          data: contributions,
+          borderColor: '#f6ad55',
+          backgroundColor: 'rgba(246,173,85,0.08)',
+          fill: true,
+          tension: 0.1,
+          pointRadius: 0,
+          borderDash: [5, 3],
+          borderWidth: 1.5
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, labels: { color: tickCol, font: { size: 11 }, boxWidth: 14 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              const fmtV = v >= 1000000 ? cur + (v/1000000).toFixed(2) + 'M' : v >= 1000 ? cur + (v/1000).toFixed(0) + 'K' : cur + v.toLocaleString();
+              return ` ${ctx.dataset.label}: ${fmtV}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridCol },
+          ticks: { color: tickCol, maxTicksLimit: 12, font: { size: 10 } }
+        },
+        y: {
+          grid: { color: gridCol },
+          ticks: {
+            color: tickCol,
+            callback: v => v >= 1000000 ? cur + (v/1000000).toFixed(1) + 'M' : v >= 1000 ? cur + (v/1000).toFixed(0) + 'K' : cur + v
+          }
+        }
       }
     }
   });
