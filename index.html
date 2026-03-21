@@ -4192,16 +4192,22 @@ document.getElementById('tableBody').addEventListener('click', e => {
 });
 
 // ─────────────────────────────────────────────
-// Portfolio state persistence — server-side (cross-device sync)
+// Portfolio state persistence — cross-device sync via GitHub Gist
 // ─────────────────────────────────────────────
-// ── Cloud sync via jsonblob.com (free, no auth, cross-device) ──
-const SYNC_BLOB_ID = '019d1043-f6c0-7ae6-8419-874565d8f024';
-const SYNC_URL = `https://jsonblob.com/api/jsonBlob/${SYNC_BLOB_ID}`;
+// Uses a public GitHub Gist as the sync backend. Reading is free (no auth).
+// Writing requires a GitHub PAT stored in localStorage (same as Anthropic key).
+const GIST_ID = 'f24cd8d546f937c243b02137b7364bde';
+const GIST_RAW_URL = `https://gist.githubusercontent.com/omerbredin-dev/${GIST_ID}/raw/trades.json`;
+const GIST_API_URL = `https://api.github.com/gists/${GIST_ID}`;
 
 // ── Trade log approach: UI trades are saved as a replay log ──
 // This survives code deployments — trades are always replayed on top of
 // whatever hardcoded data exists, so they're never lost.
 let _tradeLog = [];  // array of { action:'buy'|'sell', ...tradeDetails }
+
+function _getGitHubToken() {
+  return localStorage.getItem('github_pat') || '';
+}
 
 function savePortfolioState() {
   const payload = {
@@ -4210,19 +4216,38 @@ function savePortfolioState() {
     savedAt: new Date().toISOString(),
   };
 
-  // Save to cloud (primary — syncs across all devices)
-  // Use text/plain to avoid CORS preflight (jsonblob blocks OPTIONS)
-  fetch(SYNC_URL, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
-  }).then(() => console.log('[sync] saved to cloud, ' + _tradeLog.length + ' trades'))
-    .catch(e => console.warn('[sync] cloud save failed:', e));
-
-  // Also save to localStorage (offline fallback)
+  // Save to localStorage (immediate, always works)
   try {
     localStorage.setItem('portfolioState', JSON.stringify(payload));
   } catch(e) {}
+
+  // Save to GitHub Gist (cross-device sync)
+  const token = _getGitHubToken();
+  if (!token && _tradeLog.length > 0) {
+    // Prompt user to set up GitHub token for cross-device sync
+    const t = prompt('To sync trades across devices, enter a GitHub Personal Access Token (with "gist" scope).\n\nCreate one at: github.com/settings/tokens\n\nPaste token (or cancel to skip):');
+    if (t && t.trim()) {
+      localStorage.setItem('github_pat', t.trim());
+    }
+  }
+  const finalToken = _getGitHubToken();
+  if (finalToken) {
+    fetch(GIST_API_URL, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `token ${finalToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        files: { 'trades.json': { content: JSON.stringify(payload) } }
+      }),
+    }).then(r => {
+      if (r.ok) console.log('[sync] saved to gist, ' + _tradeLog.length + ' trades');
+      else console.warn('[sync] gist save failed:', r.status);
+    }).catch(e => console.warn('[sync] gist save failed:', e));
+  } else {
+    console.log('[sync] no GitHub token, saved to localStorage only');
+  }
 }
 
 function _recordTrade(action, details) {
@@ -4281,21 +4306,18 @@ async function loadPortfolioState() {
   localStorage.removeItem('sellHistoryData');
   localStorage.removeItem('portfolioSavedAt');
 
-  // Try cloud first (single source of truth for all devices)
-  let cloudData = null;
+  // Try GitHub Gist first (cross-device sync, no auth needed for public gist reads)
+  let gistData = null;
   try {
-    const res = await fetch(SYNC_URL, { headers: { 'Accept': 'application/json' } });
+    const res = await fetch(GIST_RAW_URL + '?t=' + Date.now(), { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data.format === 'tradelog' && Array.isArray(data.tradeLog)) {
-        cloudData = data;
-        console.log('[sync] loaded trade log from cloud,', data.tradeLog.length, 'trades, saved:', data.savedAt);
-      } else if (data.portfolio) {
-        // Legacy format — migrate: ignore old snapshot, start fresh log
-        console.log('[sync] cloud has legacy format, starting fresh trade log');
+        gistData = data;
+        console.log('[sync] loaded trade log from gist,', data.tradeLog.length, 'trades, saved:', data.savedAt);
       }
     }
-  } catch(e) { console.warn('[sync] cloud load failed:', e); }
+  } catch(e) { console.warn('[sync] gist load failed:', e); }
 
   // Also check localStorage
   let localData = null;
@@ -4313,22 +4335,22 @@ async function loadPortfolioState() {
 
   // Use whichever has more trades (or is newer if same count)
   let best = null;
-  if (cloudData && localData) {
-    if (cloudData.tradeLog.length !== localData.tradeLog.length) {
-      best = cloudData.tradeLog.length > localData.tradeLog.length ? cloudData : localData;
+  if (gistData && localData) {
+    if (gistData.tradeLog.length !== localData.tradeLog.length) {
+      best = gistData.tradeLog.length > localData.tradeLog.length ? gistData : localData;
     } else {
-      best = (cloudData.savedAt >= (localData.savedAt || '')) ? cloudData : localData;
+      best = (gistData.savedAt >= (localData.savedAt || '')) ? gistData : localData;
     }
   } else {
-    best = cloudData || localData;
+    best = gistData || localData;
   }
 
   if (best?.tradeLog?.length) {
     _tradeLog = best.tradeLog;
     _replayTradeLog(_tradeLog);
-    console.log('[sync] replayed', _tradeLog.length, 'trades from', best === cloudData ? 'cloud' : 'local');
-    // Sync to the other storage if needed
-    if (best === localData) savePortfolioState();
+    console.log('[sync] replayed', _tradeLog.length, 'trades from', best === gistData ? 'gist' : 'local');
+    // If local was newer, push to gist
+    if (best === localData && gistData) savePortfolioState();
   } else {
     console.log('[sync] no trade log found, using hardcoded data only');
   }
@@ -4337,14 +4359,17 @@ async function loadPortfolioState() {
 async function resetPortfolio() {
   if (!confirm('Reset portfolio to original hardcoded data? All trades added via the UI will be lost.')) return;
   _tradeLog = [];
-  // Clear cloud data
-  try {
-    await fetch(SYNC_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ format: 'tradelog', tradeLog: [], savedAt: new Date().toISOString() }),
-    });
-  } catch(_) {}
+  // Clear gist data
+  const token = _getGitHubToken();
+  if (token) {
+    try {
+      await fetch(GIST_API_URL, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: { 'trades.json': { content: JSON.stringify({ format: 'tradelog', tradeLog: [], savedAt: new Date().toISOString() }) } } }),
+      });
+    } catch(_) {}
+  }
   // Clear local data
   localStorage.removeItem('portfolioState');
   location.reload();
