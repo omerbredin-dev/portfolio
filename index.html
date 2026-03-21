@@ -4198,23 +4198,15 @@ document.getElementById('tableBody').addEventListener('click', e => {
 const SYNC_BLOB_ID = '019d1043-f6c0-7ae6-8419-874565d8f024';
 const SYNC_URL = `https://jsonblob.com/api/jsonBlob/${SYNC_BLOB_ID}`;
 
-// Bump this whenever hardcoded PORTFOLIO / PURCHASE_HISTORY is edited in code.
-// Saved data with an older version is discarded to prevent stale overwrites.
-const HARDCODED_VERSION = 2;  // v2: added 15x KSMF74.TA @ 411 NIS
+// ── Trade log approach: UI trades are saved as a replay log ──
+// This survives code deployments — trades are always replayed on top of
+// whatever hardcoded data exists, so they're never lost.
+let _tradeLog = [];  // array of { action:'buy'|'sell', ...tradeDetails }
 
 function savePortfolioState() {
-  // Only save TRADE-ADDED changes (symbols or qty/cost diffs from hardcoded)
-  // so that hardcoded updates are never overwritten by stale saved data.
-  const tradeData = PORTFOLIO.map(r => ({
-    symbol: r.symbol, name: r.name, type: r.type,
-    exchange: r.exchange, country: r.country, segment: r.segment,
-    qty: r.qty, avgCost: r.avgCost, avgCostCurrency: r.avgCostCurrency,
-  }));
   const payload = {
-    v: HARDCODED_VERSION,
-    portfolio: tradeData,
-    purchaseHistory: PURCHASE_HISTORY,
-    sellHistory: SELL_HISTORY,
+    format: 'tradelog',
+    tradeLog: _tradeLog,
     savedAt: new Date().toISOString(),
   };
 
@@ -4223,7 +4215,7 @@ function savePortfolioState() {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-  }).then(() => console.log('[sync] saved to cloud'))
+  }).then(() => console.log('[sync] saved to cloud, ' + _tradeLog.length + ' trades'))
     .catch(e => console.warn('[sync] cloud save failed:', e));
 
   // Also save to localStorage (offline fallback)
@@ -4232,34 +4224,57 @@ function savePortfolioState() {
   } catch(e) {}
 }
 
-function _mergePortfolioData(saved, savedHistory, savedSellHistory) {
-  // Merge saved trade data into the hardcoded PORTFOLIO array
-  if (saved && Array.isArray(saved)) {
-    const hardcoded = new Map(PORTFOLIO.map(r => [r.symbol, r]));
-    saved.forEach(s => {
-      const h = hardcoded.get(s.symbol);
-      if (h) {
-        h.qty     = s.qty;
-        h.avgCost = s.avgCost;
-        if (s.avgCostCurrency) h.avgCostCurrency = s.avgCostCurrency;
+function _recordTrade(action, details) {
+  _tradeLog.push({ action, ...details, ts: new Date().toISOString() });
+}
+
+function _replayTradeLog(log) {
+  // Replay each trade on top of the current hardcoded PORTFOLIO
+  log.forEach(t => {
+    if (t.action === 'buy') {
+      const existing = PORTFOLIO.find(r => r.symbol === t.symbol);
+      if (existing) {
+        const oldTotalCost = existing.avgCost * existing.qty;
+        existing.qty      += t.qty;
+        existing.avgCost   = (oldTotalCost + t.price * t.qty) / existing.qty;
       } else {
-        // New symbol added via Trade — keep everything
-        PORTFOLIO.push(s);
+        PORTFOLIO.push({
+          symbol: t.symbol, name: t.name || t.symbol, type: t.type || 'Stock',
+          exchange: t.exchange || '', country: t.country || '', segment: t.segment || '',
+          qty: t.qty, avgCost: t.price, avgCostCurrency: t.currency,
+          currentPrice: t.currentPrice || t.price, currentCurrency: t.currency,
+          dailyChangePct: 0,
+        });
       }
-    });
-  }
-  if (savedHistory && typeof savedHistory === 'object') {
-    for (const k of Object.keys(PURCHASE_HISTORY)) delete PURCHASE_HISTORY[k];
-    Object.assign(PURCHASE_HISTORY, savedHistory);
-  }
-  if (savedSellHistory && typeof savedSellHistory === 'object') {
-    for (const k of Object.keys(SELL_HISTORY)) delete SELL_HISTORY[k];
-    Object.assign(SELL_HISTORY, savedSellHistory);
-  }
+      if (!PURCHASE_HISTORY[t.symbol]) PURCHASE_HISTORY[t.symbol] = [];
+      PURCHASE_HISTORY[t.symbol].push({ date: t.date, qty: t.qty, price: t.price, currency: t.currency });
+    } else if (t.action === 'sell') {
+      const idx = PORTFOLIO.findIndex(r => r.symbol === t.symbol);
+      if (idx !== -1) {
+        const row = PORTFOLIO[idx];
+        row.qty -= t.qty;
+        if (row.qty <= 0) PORTFOLIO.splice(idx, 1);
+      }
+      // Consume FIFO lots from purchase history
+      const lots = PURCHASE_HISTORY[t.symbol] || [];
+      let remaining = t.qty;
+      for (let i = 0; i < lots.length && remaining > 0; i++) {
+        const take = Math.min(lots[i].qty, remaining);
+        lots[i].qty -= take;
+        remaining -= take;
+      }
+      // Remove empty lots
+      if (PURCHASE_HISTORY[t.symbol]) {
+        PURCHASE_HISTORY[t.symbol] = PURCHASE_HISTORY[t.symbol].filter(l => l.qty > 0);
+      }
+      if (!SELL_HISTORY[t.symbol]) SELL_HISTORY[t.symbol] = [];
+      SELL_HISTORY[t.symbol].push({ date: t.date, qty: t.qty, price: t.sellPrice, currency: t.currency });
+    }
+  });
 }
 
 async function loadPortfolioState() {
-  // Clear any legacy localStorage keys from old format
+  // Clear legacy keys
   localStorage.removeItem('portfolioData');
   localStorage.removeItem('purchaseHistoryData');
   localStorage.removeItem('sellHistoryData');
@@ -4271,11 +4286,12 @@ async function loadPortfolioState() {
     const res = await fetch(SYNC_URL, { headers: { 'Accept': 'application/json' } });
     if (res.ok) {
       const data = await res.json();
-      if (data.portfolio && data.v === HARDCODED_VERSION) {
+      if (data.format === 'tradelog' && Array.isArray(data.tradeLog)) {
         cloudData = data;
-        console.log('[sync] loaded from cloud, v:', data.v, 'saved:', data.savedAt);
+        console.log('[sync] loaded trade log from cloud,', data.tradeLog.length, 'trades, saved:', data.savedAt);
       } else if (data.portfolio) {
-        console.log('[sync] cloud data is stale (v' + (data.v||'?') + ' vs v' + HARDCODED_VERSION + '), discarding');
+        // Legacy format — migrate: ignore old snapshot, start fresh log
+        console.log('[sync] cloud has legacy format, starting fresh trade log');
       }
     }
   } catch(e) { console.warn('[sync] cloud load failed:', e); }
@@ -4286,43 +4302,46 @@ async function loadPortfolioState() {
     const raw = localStorage.getItem('portfolioState');
     if (raw) {
       const data = JSON.parse(raw);
-      if (data.portfolio && data.v === HARDCODED_VERSION) {
+      if (data.format === 'tradelog' && Array.isArray(data.tradeLog)) {
         localData = data;
       } else {
-        console.log('[sync] local data is stale, discarding');
         localStorage.removeItem('portfolioState');
       }
     }
   } catch(e) {}
 
-  // Use whichever is newer
+  // Use whichever has more trades (or is newer if same count)
   let best = null;
   if (cloudData && localData) {
-    best = (cloudData.savedAt >= (localData.savedAt || '')) ? cloudData : localData;
+    if (cloudData.tradeLog.length !== localData.tradeLog.length) {
+      best = cloudData.tradeLog.length > localData.tradeLog.length ? cloudData : localData;
+    } else {
+      best = (cloudData.savedAt >= (localData.savedAt || '')) ? cloudData : localData;
+    }
   } else {
     best = cloudData || localData;
   }
 
-  if (best?.portfolio) {
-    _mergePortfolioData(best.portfolio, best.purchaseHistory, best.sellHistory);
-    console.log('[sync] merged', best === cloudData ? 'cloud' : 'local', 'data');
-    // If local was newer, push it to cloud for other devices
-    if (best === localData && cloudData) {
-      savePortfolioState();
-    }
+  if (best?.tradeLog?.length) {
+    _tradeLog = best.tradeLog;
+    _replayTradeLog(_tradeLog);
+    console.log('[sync] replayed', _tradeLog.length, 'trades from', best === cloudData ? 'cloud' : 'local');
+    // Sync to the other storage if needed
+    if (best === localData) savePortfolioState();
   } else {
-    console.log('[sync] using hardcoded data (no saved state or stale)');
+    console.log('[sync] no trade log found, using hardcoded data only');
   }
 }
 
 async function resetPortfolio() {
-  if (!confirm('Reset portfolio to original hardcoded data? All trades added via the modal will be lost.')) return;
+  if (!confirm('Reset portfolio to original hardcoded data? All trades added via the UI will be lost.')) return;
+  _tradeLog = [];
   // Clear cloud data
   try {
     await fetch(SYNC_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reset: true, savedAt: new Date().toISOString() }),
+      body: JSON.stringify({ format: 'tradelog', tradeLog: [], savedAt: new Date().toISOString() }),
     });
   } catch(_) {}
   // Clear local data
@@ -4620,6 +4639,20 @@ function submitBuy() {
   if (!PURCHASE_HISTORY[sym]) PURCHASE_HISTORY[sym] = [];
   PURCHASE_HISTORY[sym].push({ date: dateFmt, qty, price, currency });
 
+  // Record in trade log for cross-device sync
+  const tradeEntry = { symbol: sym, qty, price, currency, date: dateFmt };
+  if (!existing || PORTFOLIO.find(r => r.symbol === sym)?.qty === qty) {
+    // New symbol — include metadata
+    const nameVal = document.getElementById('buy-name').value.trim() || sym;
+    const typeVal = document.getElementById('buy-type').value;
+    const exchangeVal = document.getElementById('buy-exchange').value;
+    const countryVal = document.getElementById('buy-country').value;
+    const segmentVal = document.getElementById('buy-segment').value;
+    const curPriceVal = parseFloat(document.getElementById('buy-current-price').value) || price;
+    Object.assign(tradeEntry, { name: nameVal, type: typeVal, exchange: exchangeVal, country: countryVal, segment: segmentVal, currentPrice: curPriceVal });
+  }
+  _recordTrade('buy', tradeEntry);
+
   savePortfolioState();
   renderAll();
   msgEl.style.color = 'var(--green)';
@@ -4700,6 +4733,9 @@ function submitSell() {
     const totalCost = remLots.reduce((s, l) => s + l.qty * l.price, 0);
     if (totalQty > 0) row.avgCost = +(totalCost / totalQty).toFixed(4);
   }
+
+  // Record in trade log for cross-device sync
+  _recordTrade('sell', { symbol: sym, qty, sellPrice: sellPx, currency, date: dateFmt });
 
   savePortfolioState();
   renderAll();
