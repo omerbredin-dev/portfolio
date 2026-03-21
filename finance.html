@@ -1053,6 +1053,33 @@ function init() {
     } catch { allTx = []; }
   }
   checkBankServer();
+  autoRefreshIfStale();
+}
+
+// Auto-refresh from bank in background if data is older than 4 hours
+async function autoRefreshIfStale() {
+  if (!IS_LOCAL) return; // only when server is running locally
+  try {
+    const res  = await fetch('/api/status', { signal: AbortSignal.timeout(2000) });
+    const data = await res.json();
+    if (!data.configured || !data.lastUpdate) return;
+    const ageHours = (Date.now() - new Date(data.lastUpdate)) / 3600000;
+    if (ageHours < 4) return; // fresh enough
+    console.log(`[auto] Data is ${ageHours.toFixed(1)}h old — refreshing from bank...`);
+    const btn = document.getElementById('btnRefresh');
+    if (btn) { btn.textContent = '⏳ מרענן...'; btn.disabled = true; }
+    const r2   = await fetch('/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const data2 = await r2.json();
+    if (data2.ok && data2.transactions?.length) {
+      allTx = data2.transactions;
+      localStorage.setItem('finance_tx', JSON.stringify(allTx));
+      buildState();
+      buildTxFilters();
+      renderAll();
+      console.log('[auto] Refresh complete —', allTx.length, 'transactions');
+    }
+    if (btn) { btn.textContent = '🔄 רענן'; btn.disabled = false; }
+  } catch { /* server not available */ }
 }
 </script>
 </body>
