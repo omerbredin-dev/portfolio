@@ -4211,9 +4211,10 @@ function savePortfolioState() {
   };
 
   // Save to cloud (primary — syncs across all devices)
+  // Use text/plain to avoid CORS preflight (jsonblob blocks OPTIONS)
   fetch(SYNC_URL, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload),
   }).then(() => console.log('[sync] saved to cloud, ' + _tradeLog.length + ' trades'))
     .catch(e => console.warn('[sync] cloud save failed:', e));
@@ -4340,7 +4341,7 @@ async function resetPortfolio() {
   try {
     await fetch(SYNC_URL, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ format: 'tradelog', tradeLog: [], savedAt: new Date().toISOString() }),
     });
   } catch(_) {}
