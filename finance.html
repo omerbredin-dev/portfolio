@@ -11,17 +11,18 @@
     :root, html { color-scheme: light; }
 
     :root {
-      --primary:  #00BFA5;
-      --plight:   #E0F7F4;
-      --income:   #00BFA5;
-      --expense:  #F44336;
-      --bg:       #F5F7FA;
+      --primary:  #5B5BF6;
+      --plight:   #EEEEFD;
+      --income:   #2B9741;
+      --expense:  #E85D3B;
+      --yellow:   #F5C518;
+      --bg:       #F5F3EE;
       --card:     #FFFFFF;
-      --text:     #212121;
+      --text:     #1A1A2E;
       --muted:    #9E9E9E;
-      --border:   #EEEEEE;
-      --shadow:   0 1px 8px rgba(0,0,0,0.07);
-      --radius:   12px;
+      --border:   #E8E4DC;
+      --shadow:   0 2px 12px rgba(0,0,0,0.06);
+      --radius:   16px;
     }
 
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -34,108 +35,123 @@
     .pw-box h2 { color: #e8eaf6; font-size: 24px; margin-bottom: 6px; }
     .pw-box p  { color: #7b82a8; font-size: 13px; margin-bottom: 20px; }
     .pw-box input { background: #1a1d27; border: 1px solid #2e3350; border-radius: 8px; color: #e8eaf6; padding: 10px 16px; font-size: 15px; width: 240px; outline: none; text-align: center; direction: ltr; }
-    .pw-box input:focus { border-color: #00BFA5; }
-    .pw-box button { margin-top: 12px; padding: 10px 0; background: #00BFA5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; width: 240px; display: block; }
+    .pw-box input:focus { border-color: #5B5BF6; }
+    .pw-box button { margin-top: 12px; padding: 10px 0; background: #5B5BF6; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; width: 240px; display: block; }
     .pw-err { color: #f56565; font-size: 12px; margin-top: 8px; min-height: 16px; }
 
     /* ── Header ── */
-    .header { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow); }
-    .logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; display: flex; align-items: center; gap: 6px; }
-    .nav { display: flex; gap: 2px; }
-    .nav-btn { padding: 6px 14px; border: none; border-radius: 20px; background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; transition: all .15s; font-weight: 500; }
+    .header { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow); }
+    .logo { font-size: 18px; font-weight: 900; color: var(--primary); letter-spacing: -0.5px; display: flex; align-items: center; gap: 5px; }
+    .logo-arrow { font-size: 20px; }
+    .nav { display: flex; gap: 0; }
+    .nav-btn { padding: 5px 11px; border: none; border-radius: 20px; background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; transition: all .15s; font-weight: 500; }
     .nav-btn.active { background: var(--plight); color: var(--primary); font-weight: 700; }
-    .header-right { display: flex; align-items: center; gap: 8px; }
-    .status-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); background: var(--bg); padding: 4px 10px; border-radius: 20px; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .header-right { display: flex; align-items: center; gap: 6px; }
+    .status-pill { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); background: var(--bg); padding: 3px 8px; border-radius: 20px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
     .status-dot.on { background: var(--income); }
-    .btn-sm { padding: 6px 13px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all .15s; }
+    .btn-sm { padding: 5px 11px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all .15s; }
     .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
     .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
     .btn-primary-sm { background: var(--primary); border: none; color: white; }
 
     /* ── Upload screen ── */
-    .upload-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 56px); padding: 40px; }
-    .upload-card { background: var(--card); border-radius: 20px; padding: 48px 40px; text-align: center; box-shadow: var(--shadow); max-width: 420px; width: 100%; }
-    .upload-emoji { font-size: 52px; margin-bottom: 18px; }
+    .upload-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 52px); padding: 40px 20px; }
+    .upload-card { background: var(--card); border-radius: 20px; padding: 40px 32px; text-align: center; box-shadow: var(--shadow); max-width: 420px; width: 100%; }
+    .upload-emoji { font-size: 48px; margin-bottom: 16px; }
     .upload-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-    .upload-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; }
-    .drop-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 28px; cursor: pointer; transition: all .2s; color: var(--muted); font-size: 14px; }
+    .upload-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+    .drop-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 24px; cursor: pointer; transition: all .2s; color: var(--muted); font-size: 14px; }
     .drop-zone:hover, .drop-zone.over { border-color: var(--primary); background: var(--plight); color: var(--primary); }
-    .drop-zone .dz-icon { font-size: 30px; margin-bottom: 6px; }
+    .drop-zone .dz-icon { font-size: 28px; margin-bottom: 6px; }
     .btn-upload-main { width: 100%; padding: 13px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
 
-    /* ── Layout ── */
-    .main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    /* ── Main narrow layout ── */
+    .main { max-width: 520px; margin: 0 auto; padding: 16px 14px 40px; }
 
     /* ── Month nav ── */
-    .month-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; }
-    .month-label { font-size: 20px; font-weight: 800; min-width: 170px; text-align: center; }
-    .arrow-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); transition: all .15s; }
+    .month-nav { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+    .month-label { font-size: 19px; font-weight: 800; min-width: 160px; text-align: center; }
+    .arrow-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); transition: all .15s; }
     .arrow-btn:hover { border-color: var(--primary); color: var(--primary); }
     .arrow-btn:disabled { opacity: .3; cursor: default; }
 
-    /* ── Summary cards ── */
-    .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
-    .sum-card { background: var(--card); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
-    .sum-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
-    .sum-amount { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
-    .sum-amount.c-income  { color: var(--income); }
-    .sum-amount.c-expense { color: var(--expense); }
-    .sum-amount.c-pos     { color: var(--income); }
-    .sum-amount.c-neg     { color: var(--expense); }
-    .sum-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    /* ── Cash flow summary card ── */
+    .cf-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
+    .cf-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+    .cf-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+    .cf-row-label { font-size: 14px; color: var(--text); }
+    .cf-row-amt { font-size: 15px; font-weight: 700; }
+    .cf-row-amt.income  { color: var(--income); }
+    .cf-row-amt.expense { color: var(--expense); }
+    .cf-sub-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0 3px 16px; }
+    .cf-sub-label { font-size: 13px; color: var(--muted); }
+    .cf-sub-amt { font-size: 13px; font-weight: 600; color: var(--expense); }
+    .cf-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .cf-balance-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 4px; margin-top: 4px; border-top: 1px solid var(--border); }
+    .cf-balance-label { font-size: 15px; font-weight: 700; }
+    .cf-balance-amt { font-size: 20px; font-weight: 800; }
+    .cf-balance-amt.pos { color: var(--income); }
+    .cf-balance-amt.neg { color: var(--expense); }
+    /* Progress bar */
+    .cf-progress { margin: 12px 0 4px; }
+    .cf-progress-track { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; display: flex; gap: 2px; }
+    .cf-progress-fixed { height: 100%; border-radius: 4px; background: #B8A9F8; }
+    .cf-progress-var   { height: 100%; border-radius: 4px; background: var(--expense); }
+    .cf-progress-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
 
-    /* ── Grid ── */
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .full { grid-column: 1 / -1; }
+    /* ── Section headers ── */
+    .section-hdr { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 10px; }
+    .section-hdr-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .section-hdr-amt { font-size: 13px; font-weight: 700; color: var(--expense); }
+    .section-hdr-amt.inc { color: var(--income); }
 
-    /* ── Card ── */
+    /* ── Category cards (expandable) ── */
+    .cat-card { background: var(--card); border-radius: 12px; margin-bottom: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); overflow: hidden; }
+    .cat-card-head { display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: pointer; transition: background .1s; }
+    .cat-card-head:hover { background: #FAFAFA; }
+    .cat-card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+    .cat-card-info { flex: 1; min-width: 0; }
+    .cat-card-name  { font-size: 14px; font-weight: 600; }
+    .cat-card-count { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .cat-card-right { text-align: left; }
+    .cat-card-amt   { font-size: 15px; font-weight: 700; color: var(--expense); }
+    .cat-card-amt.income { color: var(--income); }
+    .cat-card-chevron { font-size: 14px; color: var(--muted); margin-right: 4px; transition: transform .2s; display: inline-block; }
+    .cat-card.open .cat-card-chevron { transform: rotate(90deg); }
+    /* Progress bar inside category */
+    .cat-card-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+    .cat-card-bar-fill { height: 100%; border-radius: 2px; }
+
+    /* Category expanded body */
+    .cat-card-body { display: none; border-top: 1px solid var(--border); }
+    .cat-card.open .cat-card-body { display: block; }
+
+    /* Weekly table inside expanded card */
+    .week-section { padding: 4px 0; }
+    .week-label { font-size: 11px; font-weight: 600; color: var(--muted); padding: 8px 14px 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .cat-tx-item { display: flex; align-items: center; padding: 8px 14px; gap: 10px; }
+    .cat-tx-item + .cat-tx-item { border-top: 1px solid var(--border); }
+    .cat-tx-item:hover { background: #FAFAFA; }
+    .cat-tx-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .cat-tx-info { flex: 1; min-width: 0; }
+    .cat-tx-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-tx-date { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .cat-tx-amt  { font-size: 13px; font-weight: 700; color: var(--expense); white-space: nowrap; }
+    .cat-tx-amt.pos { color: var(--income); }
+    /* Inst badge */
+    .inst { font-size: 10px; background: var(--plight); color: var(--primary); padding: 1px 5px; border-radius: 4px; margin-inline-end: 4px; font-weight: 600; }
+    /* Week total row */
+    .week-total-row { display: flex; justify-content: space-between; padding: 6px 14px; background: var(--bg); font-size: 12px; }
+    .week-total-label { color: var(--muted); font-weight: 500; }
+    .week-total-amt { font-weight: 700; color: var(--expense); }
+
+    /* ── Trends view ── */
+    .trends-main { max-width: 720px; margin: 0 auto; padding: 16px 14px 40px; }
     .card { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
     .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
     .card-title { font-size: 14px; font-weight: 700; }
     .link-btn { font-size: 12px; color: var(--primary); background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; }
-
-    /* ── Donut ── */
-    .donut-wrap { position: relative; height: 200px; display: flex; align-items: center; justify-content: center; }
-    .donut-center { position: absolute; text-align: center; pointer-events: none; }
-    .donut-center .big   { font-size: 22px; font-weight: 800; }
-    .donut-center .small { font-size: 11px; color: var(--muted); }
-
-    /* ── Category list ── */
-    .cat-item { display: flex; align-items: center; padding: 9px 0; gap: 10px; cursor: pointer; border-radius: 8px; transition: background .1s; }
-    .cat-item:hover { background: var(--bg); margin: 0 -8px; padding: 9px 8px; }
-    .cat-item + .cat-item { border-top: 1px solid var(--border); }
-    .cat-item:hover + .cat-item { border-top-color: transparent; }
-    .cat-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-    .cat-info { flex: 1; min-width: 0; }
-    .cat-name  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cat-count { font-size: 11px; color: var(--muted); }
-    .cat-right { text-align: left; min-width: 68px; }
-    .cat-amt   { font-size: 13px; font-weight: 700; }
-    .cat-amt.exp { color: var(--expense); }
-    .cat-amt.inc { color: var(--income); }
-    .cat-bar   { height: 3px; background: var(--border); border-radius: 2px; margin-top: 4px; overflow: hidden; }
-    .cat-fill  { height: 100%; border-radius: 2px; }
-
-    /* ── Tx item ── */
-    .tx-item { display: flex; align-items: center; padding: 9px 0; gap: 10px; }
-    .tx-item + .tx-item { border-top: 1px solid var(--border); }
-    .tx-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-    .tx-info { flex: 1; min-width: 0; }
-    .tx-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tx-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
-    .tx-amt   { font-size: 13px; font-weight: 700; white-space: nowrap; }
-    .tx-amt.neg { color: var(--expense); }
-    .tx-amt.pos { color: var(--income); }
-
-    /* ── Installment badge ── */
-    .inst { font-size: 10px; background: #EEF2FF; color: #6366F1; padding: 1px 5px; border-radius: 4px; margin-inline-end: 4px; font-weight: 600; }
-
-    /* ── Section divider ── */
-    .section-div { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 18px 0 12px; }
-    .section-div::before, .section-div::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-    /* ── Trends ── */
     .trend-wrap { height: 280px; }
     .month-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .month-table th { text-align: right; padding: 8px 10px; color: var(--muted); font-weight: 500; border-bottom: 2px solid var(--border); font-size: 12px; }
@@ -150,45 +166,49 @@
 
     /* ── Transactions view ── */
     .tx-filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-    .tx-search  { flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--card); direction: rtl; }
+    .tx-search  { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--card); direction: rtl; }
     .tx-search:focus { outline: none; border-color: var(--primary); }
     .tx-sel { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--card); cursor: pointer; direction: rtl; }
     .tx-full { display: flex; align-items: center; padding: 10px 8px; border-radius: 8px; gap: 10px; transition: background .1s; }
     .tx-full:hover { background: var(--bg); }
+    .tx-item { display: flex; align-items: center; padding: 9px 0; gap: 10px; }
+    .tx-item + .tx-item { border-top: 1px solid var(--border); }
+    .tx-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .tx-amt   { font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .tx-amt.neg { color: var(--expense); }
+    .tx-amt.pos { color: var(--income); }
     .cat-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; white-space: nowrap; }
     .excl-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #F5F5F5; color: var(--muted); }
+
+    /* ── Accounts view ── */
+    .accounts-wrap { max-width: 720px; margin: 0 auto; padding: 16px 14px 40px; }
+    .accounts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .account-card  { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+    .account-provider { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .account-name  { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+    .account-balance-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .account-balance { font-size: 26px; font-weight: 800; }
+    .account-balance.positive { color: var(--income); }
+    .account-balance.negative { color: var(--expense); }
+    .account-meta  { margin-top: 10px; font-size: 11px; color: var(--muted); }
+    .account-type-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .badge-bank   { background: #E3F2FD; color: #1565C0; }
+    .badge-credit { background: #FFF3E0; color: #E65100; }
+    .accounts-updated { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
+    .accounts-refresh-btn { display: flex; align-items: center; gap: 8px; margin: 0 auto 16px; padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .accounts-refresh-btn:disabled { opacity: .6; cursor: default; }
+    .account-no-data { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
 
     /* ── Views ── */
     .view { display: none; }
     .view.active { display: block; }
 
-    /* ── Accounts view ── */
-    .accounts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 16px; }
-    .account-card  { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-    .account-provider { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-    .account-name  { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-    .account-balance-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
-    .account-balance { font-size: 28px; font-weight: 800; }
-    .account-balance.positive { color: var(--income); }
-    .account-balance.negative { color: var(--expense); }
-    .account-meta  { margin-top: 12px; font-size: 11px; color: var(--muted); }
-    .account-type-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-    .badge-bank   { background: #E3F2FD; color: #1565C0; }
-    .badge-credit { background: #FFF3E0; color: #E65100; }
-    .accounts-updated { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
-    .accounts-refresh-btn { display: flex; align-items: center; gap: 8px; margin: 0 auto 20px; padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
-    .accounts-refresh-btn:disabled { opacity: .6; cursor: default; }
-    .account-no-data { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
-
-    /* ── Responsive ── */
-    @media (max-width: 680px) {
-      .sum-grid { grid-template-columns: 1fr 1fr; }
-      .grid2 { grid-template-columns: 1fr; }
-      .main { padding: 12px; }
-    }
-    @media (max-width: 400px) {
-      .sum-grid { grid-template-columns: 1fr; }
-    }
+    /* ── Grid (for trends) ── */
+    .grid2 { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+    .full { grid-column: 1 / -1; }
   </style>
 </head>
 <body>
@@ -209,7 +229,7 @@
 
   <!-- Header -->
   <div class="header">
-    <div class="logo">⬆ Rise</div>
+    <div class="logo"><span class="logo-arrow">⬆</span>Rise</div>
     <nav class="nav">
       <button class="nav-btn active" onclick="switchView('dashboard',this)">תזרים</button>
       <button class="nav-btn" onclick="switchView('trends',this)">מגמות</button>
@@ -221,7 +241,7 @@
         <span class="status-dot" id="statusDot"></span>
         <span id="statusTxt">לא מחובר</span>
       </div>
-      <button class="btn-sm btn-ghost" onclick="triggerCSV()">📂 CSV</button>
+      <button class="btn-sm btn-ghost" onclick="triggerCSV()">📂</button>
       <button class="btn-sm btn-primary-sm" id="btnRefresh" onclick="refreshFromBank()" style="display:none">🔄 רענן</button>
     </div>
   </div>
@@ -245,7 +265,7 @@
           <span>או</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
-        <button class="btn-upload-main" style="background:#00BFA5" onclick="refreshFromBank()">🏦 משוך נתונים מהבנק</button>
+        <button class="btn-upload-main" style="background:var(--primary)" onclick="refreshFromBank()">🏦 משוך נתונים מהבנק</button>
         <div style="font-size:11px;color:var(--muted);margin-top:6px" id="bankBtnStatus"></div>
       </div>
     </div>
@@ -253,86 +273,80 @@
 
   <!-- Main content -->
   <div id="mainContent" style="display:none">
-    <div class="main">
 
-      <!-- Month nav -->
+    <!-- Month nav (always visible) -->
+    <div class="main" style="padding-bottom:0">
       <div class="month-nav">
         <button class="arrow-btn" id="btnPrev" onclick="prevMonth()">›</button>
         <div class="month-label" id="monthLabel"></div>
         <button class="arrow-btn" id="btnNext" onclick="nextMonth()">‹</button>
       </div>
+    </div>
 
-      <!-- ── DASHBOARD VIEW ── -->
-      <div id="viewDashboard" class="view active">
+    <!-- ── DASHBOARD VIEW ── -->
+    <div id="viewDashboard" class="view active">
+      <div class="main">
 
-        <div class="sum-grid">
-          <div class="sum-card">
-            <div class="sum-label">הכנסות</div>
-            <div class="sum-amount c-income" id="sumIncome">₪0</div>
-            <div class="sum-sub" id="subIncome"></div>
+        <!-- Cash flow summary card -->
+        <div class="cf-card">
+          <div class="cf-title">תזרים חודשי</div>
+          <div class="cf-row">
+            <span class="cf-row-label">הכנסות</span>
+            <span class="cf-row-amt income" id="cfIncome">₪0</span>
           </div>
-          <div class="sum-card">
-            <div class="sum-label">הוצאות</div>
-            <div class="sum-amount c-expense" id="sumExpense">₪0</div>
-            <div class="sum-sub" id="subExpense"></div>
+          <div class="cf-sub-row">
+            <span class="cf-sub-label">קבועות</span>
+            <span class="cf-sub-amt" id="cfFixed">₪0</span>
           </div>
-          <div class="sum-card">
-            <div class="sum-label">מאזן חודשי</div>
-            <div class="sum-amount" id="sumBalance">₪0</div>
-            <div class="sum-sub" id="subBalance"></div>
+          <div class="cf-sub-row">
+            <span class="cf-sub-label">משתנות</span>
+            <span class="cf-sub-amt" id="cfVar">₪0</span>
+          </div>
+          <!-- Progress bar: fixed (purple) + variable (orange) vs income -->
+          <div class="cf-progress">
+            <div class="cf-progress-track" id="cfProgressTrack">
+              <div class="cf-progress-fixed" id="cfBarFixed" style="width:0%"></div>
+              <div class="cf-progress-var"   id="cfBarVar"   style="width:0%"></div>
+            </div>
+            <div class="cf-progress-labels">
+              <span id="cfProgressPct"></span>
+              <span id="cfProgressOf"></span>
+            </div>
+          </div>
+          <div class="cf-balance-row">
+            <span class="cf-balance-label">מאזן</span>
+            <span class="cf-balance-amt" id="cfBalance">₪0</span>
           </div>
         </div>
 
-        <div class="grid2">
-          <!-- Donut -->
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">הוצאות לפי קטגוריה</span>
-            </div>
-            <div class="donut-wrap">
-              <canvas id="donutChart"></canvas>
-              <div class="donut-center">
-                <div class="big" id="donutTotal"></div>
-                <div class="small">סה"כ הוצאות</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Categories -->
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">קטגוריות</span>
-              <button class="link-btn" onclick="goTx()">הצג הכל</button>
-            </div>
-            <div id="catList"></div>
-          </div>
+        <!-- Variable expenses -->
+        <div class="section-hdr">
+          <span class="section-hdr-title">הוצאות משתנות</span>
+          <span class="section-hdr-amt" id="varTotal"></span>
         </div>
+        <div id="varCatList"></div>
 
-        <!-- Recent transactions -->
-        <div class="card full" style="margin-bottom:12px">
-          <div class="card-head">
-            <span class="card-title">פעולות אחרונות</span>
-            <button class="link-btn" onclick="goTx()">הצג הכל</button>
-          </div>
-          <div id="recentTx"></div>
+        <!-- Fixed expenses -->
+        <div class="section-hdr">
+          <span class="section-hdr-title">הוצאות קבועות</span>
+          <span class="section-hdr-amt" id="fixedTotal"></span>
         </div>
+        <div id="fixedCatList"></div>
 
-        <!-- Non-cashflow -->
-        <div id="ncfWrap" style="display:none">
-          <div class="section-div">מחוץ לתזרים</div>
-          <div class="card full">
-            <div class="card-head">
-              <span class="card-title">פעולות לא תזרימיות</span>
-            </div>
-            <div id="ncfList"></div>
-          </div>
+        <!-- Income -->
+        <div class="section-hdr">
+          <span class="section-hdr-title">הכנסות</span>
+          <span class="section-hdr-amt inc" id="incomeTotal"></span>
         </div>
+        <div id="incomeList"></div>
 
       </div>
+    </div>
 
-      <!-- ── TRENDS VIEW ── -->
-      <div id="viewTrends" class="view">
-        <div class="card full" style="margin-bottom:12px">
+    <!-- ── TRENDS VIEW ── -->
+    <div id="viewTrends" class="view">
+      <div class="trends-main">
+        <div class="card" style="margin-bottom:12px">
           <div class="card-head">
             <span class="card-title">הכנסות והוצאות — 12 חודשים</span>
           </div>
@@ -340,7 +354,7 @@
             <canvas id="trendChart"></canvas>
           </div>
         </div>
-        <div class="card full">
+        <div class="card">
           <div class="card-head">
             <span class="card-title">סיכום חודשי</span>
           </div>
@@ -357,19 +371,23 @@
           </table>
         </div>
       </div>
+    </div>
 
-      <!-- ── ACCOUNTS VIEW ── -->
-      <div id="viewAccounts" class="view">
+    <!-- ── ACCOUNTS VIEW ── -->
+    <div id="viewAccounts" class="view">
+      <div class="accounts-wrap">
         <button class="accounts-refresh-btn" id="btnAccountsRefresh" onclick="refreshAccounts()">🔄 רענן נתוני חשבונות</button>
         <div class="accounts-grid" id="accountsGrid">
           <div class="account-no-data">לחץ "רענן נתוני חשבונות" כדי למשוך יתרות עדכניות מהבנק ומחברות האשראי</div>
         </div>
         <div class="accounts-updated" id="accountsUpdated"></div>
       </div>
+    </div>
 
-      <!-- ── TRANSACTIONS VIEW ── -->
-      <div id="viewTransactions" class="view">
-        <div class="card full">
+    <!-- ── TRANSACTIONS VIEW ── -->
+    <div id="viewTransactions" class="view">
+      <div class="accounts-wrap">
+        <div class="card">
           <div class="tx-filters">
             <input class="tx-search" id="txSearch" placeholder="חיפוש פעולות..." oninput="renderTxView()" dir="rtl">
             <select class="tx-sel" id="txCat" onchange="renderTxView()">
@@ -387,8 +405,8 @@
           <div id="txListFull"></div>
         </div>
       </div>
-
     </div>
+
   </div>
 </div>
 
@@ -396,16 +414,15 @@
 
 <script>
 // ════════════════════════════════════════════
-// STATE (must be first — init() is called early)
+// STATE
 // ════════════════════════════════════════════
 let allTx      = [];
 let months     = [];
 let curIdx     = 0;
-let donutInst  = null;
 let trendInst  = null;
 
 // ════════════════════════════════════════════
-// BANK SERVER (must be before IIFE / init)
+// BANK SERVER
 // ════════════════════════════════════════════
 const IS_LOCAL    = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const BANK_SERVER = IS_LOCAL ? '' : 'http://localhost:3001';
@@ -447,6 +464,15 @@ async function checkPw() {
 // ════════════════════════════════════════════
 // CATEGORY CONFIG
 // ════════════════════════════════════════════
+// Fixed: recurring, predictable amounts
+const FIXED_CATS = new Set([
+  'משכנתא', 'ארנונה', 'ועד בית', 'ועד', 'תקשורת', 'ביטוח', 'גז', 'חשמל', 'מנויים', 'דיור',
+]);
+// Income categories
+const INCOME_CATS = new Set([
+  'הכנסות קבועות', 'הכנסות משתנות', 'הכנסות לא תזרימיות',
+]);
+
 const CAT = {
   'ארנונה':                   { i: '🏛️', c: '#9B59B6', bg: '#F5EEF8' },
   'ביטוח':                    { i: '🛡️', c: '#3498DB', bg: '#EBF5FB' },
@@ -470,7 +496,7 @@ const CAT = {
   'אירועים תיירות ופנאי ':    { i: '✈️', c: '#5D6D7E', bg: '#F2F3F4' },
   'רפואה טיפולים ופארמה':     { i: '💊', c: '#17A589', bg: '#E8F8F5' },
   'תחבורה ציבורית':           { i: '🚌', c: '#2E86C1', bg: '#EBF5FB' },
-  'הכנסות קבועות':            { i: '💰', c: '#00BFA5', bg: '#E0F7F4' },
+  'הכנסות קבועות':            { i: '💰', c: '#2B9741', bg: '#E9F7EF' },
   'הכנסות משתנות':            { i: '📈', c: '#27AE60', bg: '#E9F7EF' },
   'הכנסות לא תזרימיות':       { i: '💹', c: '#2ECC71', bg: '#E8FAF1' },
 };
@@ -516,7 +542,7 @@ function fmtSourceType(s) {
 // CSV PARSING
 // ════════════════════════════════════════════
 function parseCSV(text) {
-  text = text.replace(/^\uFEFF/, ''); // BOM
+  text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   return lines.slice(1).map(line => {
     const c = splitCSVLine(line);
@@ -583,7 +609,7 @@ function loadCSVFile(file) {
 // ════════════════════════════════════════════
 function buildState() {
   const set = new Set(allTx.map(t => t.month).filter(Boolean));
-  months = [...set].sort((a, b) => b.localeCompare(a)); // newest first
+  months = [...set].sort((a, b) => b.localeCompare(a));
   curIdx = 0;
 }
 
@@ -633,7 +659,7 @@ function renderAll() {
 }
 
 // ════════════════════════════════════════════
-// DASHBOARD
+// DASHBOARD — RiseUp style
 // ════════════════════════════════════════════
 function renderDashboard() {
   document.getElementById('monthLabel').textContent = fmtMonth(months[curIdx]);
@@ -641,46 +667,166 @@ function renderDashboard() {
 
   const tx  = curMonthTx();
   const cf  = tx.filter(t => !t.excluded);
-  const ncf = tx.filter(t => t.excluded);
 
-  const income  = cf.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const expense = cf.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
-  const balance = income + expense;
+  // Separate income / expenses
+  const incomeTx  = cf.filter(t => t.amount > 0);
+  const expenseTx = cf.filter(t => t.amount < 0);
 
-  // Summary cards
-  document.getElementById('sumIncome').textContent  = fmt(income);
-  document.getElementById('sumExpense').textContent = fmt(Math.abs(expense));
-  const balEl = document.getElementById('sumBalance');
-  balEl.textContent  = (balance >= 0 ? '+' : '-') + fmt(Math.abs(balance));
-  balEl.className    = 'sum-amount ' + (balance >= 0 ? 'c-pos' : 'c-neg');
-  document.getElementById('subIncome').textContent  = cf.filter(t => t.amount > 0).length + ' פעולות';
-  document.getElementById('subExpense').textContent = cf.filter(t => t.amount < 0).length + ' פעולות';
-  document.getElementById('subBalance').textContent = balance >= 0 ? '💪 חיסכון החודש' : '⚠️ גירעון החודש';
+  const totalIncome  = incomeTx.reduce((s, t) => s + t.amount, 0);
+  const totalExpense = Math.abs(expenseTx.reduce((s, t) => s + t.amount, 0));
 
-  // Expense categories
-  const expMap = {};
-  cf.filter(t => t.amount < 0).forEach(t => {
-    const k = t.category?.trim() || 'אחר';
-    expMap[k] = (expMap[k] || 0) + Math.abs(t.amount);
-  });
-  const sorted = Object.entries(expMap).sort((a, b) => b[1] - a[1]);
-  const totalExp = Math.abs(expense) || 1;
+  // Split expenses into fixed / variable
+  const fixedTx    = expenseTx.filter(t => FIXED_CATS.has(t.category?.trim()));
+  const varTx      = expenseTx.filter(t => !FIXED_CATS.has(t.category?.trim()));
+  const totalFixed = Math.abs(fixedTx.reduce((s, t) => s + t.amount, 0));
+  const totalVar   = Math.abs(varTx.reduce((s, t) => s + t.amount, 0));
+  const balance    = totalIncome - totalFixed - totalVar;
 
-  renderDonut(sorted, totalExp);
-  renderCatList(sorted, cf, totalExp);
+  // ── Cash flow card ──
+  document.getElementById('cfIncome').textContent  = fmt(totalIncome);
+  document.getElementById('cfFixed').textContent   = fmt(totalFixed);
+  document.getElementById('cfVar').textContent     = fmt(totalVar);
 
-  // Recent transactions (cash-flow, by date desc, last 10)
-  const recent = [...cf].sort(byDateDesc).slice(0, 10);
-  document.getElementById('recentTx').innerHTML = recent.map(txHTML).join('') || emptyHTML('אין פעולות בחודש זה');
+  const balEl = document.getElementById('cfBalance');
+  balEl.textContent = (balance >= 0 ? '+' : '') + fmt(Math.abs(balance));
+  balEl.className   = 'cf-balance-amt ' + (balance >= 0 ? 'pos' : 'neg');
 
-  // Non-cashflow
-  if (ncf.length) {
-    document.getElementById('ncfWrap').style.display = 'block';
-    const sorted_ncf = [...ncf].sort(byDateDesc);
-    document.getElementById('ncfList').innerHTML = sorted_ncf.map(txHTML).join('');
-  } else {
-    document.getElementById('ncfWrap').style.display = 'none';
+  // Progress bar
+  const base = totalIncome || 1;
+  const pFixed = Math.min((totalFixed / base) * 100, 100);
+  const pVar   = Math.min((totalVar   / base) * 100, 100 - pFixed);
+  document.getElementById('cfBarFixed').style.width = pFixed.toFixed(1) + '%';
+  document.getElementById('cfBarVar').style.width   = pVar.toFixed(1) + '%';
+  const usedPct = Math.round(((totalFixed + totalVar) / base) * 100);
+  document.getElementById('cfProgressPct').textContent = usedPct + '% מהכנסות';
+  document.getElementById('cfProgressOf').textContent  = fmt(totalFixed + totalVar) + ' / ' + fmt(totalIncome);
+
+  // ── Variable categories ──
+  document.getElementById('varTotal').textContent = fmt(totalVar);
+  renderCatSection('varCatList', varTx, totalVar, false);
+
+  // ── Fixed categories ──
+  document.getElementById('fixedTotal').textContent = fmt(totalFixed);
+  renderCatSection('fixedCatList', fixedTx, totalFixed, true);
+
+  // ── Income ──
+  document.getElementById('incomeTotal').textContent = fmt(totalIncome);
+  renderCatSection('incomeList', incomeTx, totalIncome, false, true);
+}
+
+function renderCatSection(containerId, txList, sectionTotal, isFixed, isIncome = false) {
+  const container = document.getElementById(containerId);
+  if (!txList.length) {
+    container.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">אין פעולות</div>`;
+    return;
   }
+
+  // Group by category
+  const catMap = {};
+  txList.forEach(t => {
+    const k = t.category?.trim() || 'אחר';
+    if (!catMap[k]) catMap[k] = [];
+    catMap[k].push(t);
+  });
+
+  const cats = Object.entries(catMap).sort((a, b) => {
+    const sumA = a[1].reduce((s, t) => s + Math.abs(t.amount), 0);
+    const sumB = b[1].reduce((s, t) => s + Math.abs(t.amount), 0);
+    return sumB - sumA;
+  });
+
+  const base = sectionTotal || 1;
+
+  container.innerHTML = cats.map(([name, txs]) => {
+    const total = txs.reduce((s, t) => s + Math.abs(t.amount), 0);
+    const c     = getCat(name);
+    const pct   = (total / base) * 100;
+    const id    = 'cat-body-' + encodeURIComponent(name);
+    const amtClass = isIncome ? 'cat-card-amt income' : 'cat-card-amt';
+
+    return `
+      <div class="cat-card" id="catcard-${encodeURIComponent(name)}">
+        <div class="cat-card-head" onclick="toggleCat('${escHtml(name)}')">
+          <div class="cat-card-icon" style="background:${c.bg}">${c.i}</div>
+          <div class="cat-card-info">
+            <div class="cat-card-name">${escHtml(name)}</div>
+            <div class="cat-card-count">${txs.length} פעולות</div>
+          </div>
+          <div class="cat-card-right">
+            <div class="${amtClass}">${isIncome ? '+' : ''}${fmt(total)}</div>
+            ${!isIncome && !isFixed ? `<div class="cat-card-bar"><div class="cat-card-bar-fill" style="width:${pct.toFixed(1)}%;background:${c.c}"></div></div>` : ''}
+          </div>
+          <span class="cat-card-chevron">›</span>
+        </div>
+        <div class="cat-card-body" id="${id}">
+          ${renderCatBody(txs, isIncome)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCatBody(txs, isIncome) {
+  // Group by week
+  const sorted = [...txs].sort(byDateDesc);
+  const weeks  = groupByWeek(sorted);
+
+  return weeks.map(({ label, items, total }) => {
+    const txsHtml = items.map(t => {
+      const c    = getCat(t.category);
+      const inst = (t.instNum && t.instTotal) ? `<span class="inst">${t.instNum}/${t.instTotal}</span>` : '';
+      const isPos = t.amount >= 0;
+      return `
+        <div class="cat-tx-item">
+          <div class="cat-tx-icon" style="background:${c.bg}">${c.i}</div>
+          <div class="cat-tx-info">
+            <div class="cat-tx-name">${inst}${escHtml(t.name || 'לא ידוע')}</div>
+            <div class="cat-tx-date">${fmtDate(t.date)}${t.sourceType ? ' · ' + fmtSourceType(t.sourceType) : ''}</div>
+          </div>
+          <div class="cat-tx-amt ${isPos ? 'pos' : ''}">${isPos ? '+' : ''}${fmtFull(t.amount)}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="week-section">
+        ${weeks.length > 1 ? `
+          <div class="week-total-row">
+            <span class="week-total-label">${label}</span>
+            <span class="week-total-amt">${isIncome ? '+' : ''}${fmt(total)}</span>
+          </div>` : ''}
+        ${txsHtml}
+      </div>`;
+  }).join('');
+}
+
+function groupByWeek(txs) {
+  const buckets = {};
+  txs.forEach(t => {
+    const wk = getWeekKey(t.date);
+    if (!buckets[wk]) buckets[wk] = { label: wk, items: [], total: 0 };
+    buckets[wk].items.push(t);
+    buckets[wk].total += Math.abs(t.amount);
+  });
+  return Object.values(buckets);
+}
+
+function getWeekKey(dateStr) {
+  if (!dateStr) return 'תאריך לא ידוע';
+  const [d, m, y] = dateStr.split('/').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayOfMonth = date.getDate();
+  if (dayOfMonth <= 7)  return 'שבוע 1';
+  if (dayOfMonth <= 14) return 'שבוע 2';
+  if (dayOfMonth <= 21) return 'שבוע 3';
+  return 'שבוע 4';
+}
+
+function toggleCat(name) {
+  const id   = 'cat-body-' + encodeURIComponent(name);
+  const card = document.getElementById('catcard-' + encodeURIComponent(name));
+  const body = document.getElementById(id);
+  if (!card || !body) return;
+  const isOpen = card.classList.toggle('open');
+  body.style.display = isOpen ? 'block' : 'none';
 }
 
 function byDateDesc(a, b) {
@@ -689,83 +835,19 @@ function byDateDesc(a, b) {
   return db.localeCompare(da);
 }
 
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function emptyHTML(msg) {
   return `<div style="text-align:center;padding:30px;color:var(--muted);font-size:14px">${msg}</div>`;
-}
-
-// ── Donut ──
-function renderDonut(sorted, totalExp) {
-  const top = sorted.slice(0, 9);
-  const rest = sorted.slice(9).reduce((s, [, v]) => s + v, 0);
-  if (rest > 0) top.push(['אחר', rest]);
-
-  document.getElementById('donutTotal').textContent = fmt(totalExp);
-
-  const labels = top.map(([n]) => n);
-  const data   = top.map(([, v]) => v);
-  const colors = top.map(([n]) => getCat(n).c);
-
-  if (donutInst) donutInst.destroy();
-  const ctx = document.getElementById('donutChart').getContext('2d');
-  donutInst = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }] },
-    options: {
-      cutout: '68%',
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + fmt(c.parsed) } }
-      },
-      animation: { duration: 400 },
-    }
-  });
-}
-
-// ── Category list ──
-function renderCatList(sorted, cf, totalExp) {
-  const top7 = sorted.slice(0, 7);
-  document.getElementById('catList').innerHTML = top7.map(([name, amt]) => {
-    const c     = getCat(name);
-    const pct   = (amt / totalExp) * 100;
-    const count = cf.filter(t => t.amount < 0 && t.category?.trim() === name).length;
-    return `
-      <div class="cat-item" onclick="goTx('${name}')">
-        <div class="cat-dot" style="background:${c.bg}">${c.i}</div>
-        <div class="cat-info">
-          <div class="cat-name">${name}</div>
-          <div class="cat-count">${count} פעולות</div>
-        </div>
-        <div class="cat-right">
-          <div class="cat-amt exp">${fmt(amt)}</div>
-          <div class="cat-bar"><div class="cat-fill" style="width:${pct.toFixed(1)}%;background:${c.c}"></div></div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ── Transaction HTML ──
-function txHTML(t) {
-  const c      = getCat(t.category);
-  const isPos  = t.amount >= 0;
-  const inst   = (t.instNum && t.instTotal) ? `<span class="inst">${t.instNum}/${t.instTotal}</span>` : '';
-  const note   = t.notes ? ` · ${t.notes}` : '';
-  const src    = fmtSourceType(t.sourceType);
-  return `
-    <div class="tx-item">
-      <div class="tx-icon" style="background:${c.bg}">${c.i}</div>
-      <div class="tx-info">
-        <div class="tx-name">${inst}${t.name || 'לא ידוע'}</div>
-        <div class="tx-meta">${fmtDate(t.date)}${src ? ' · ' + src : ''}${t.category ? ' · ' + t.category : ''}${note}</div>
-      </div>
-      <div class="tx-amt ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : '-'}${fmtFull(t.amount)}</div>
-    </div>`;
 }
 
 // ════════════════════════════════════════════
 // TRENDS
 // ════════════════════════════════════════════
 function renderTrends() {
-  const allM  = [...new Set(allTx.map(t => t.month).filter(Boolean))].sort();
+  const allM   = [...new Set(allTx.map(t => t.month).filter(Boolean))].sort();
   const last12 = allM.slice(-12);
 
   const labels  = last12.map(m => { const [y, mo] = m.split('-'); return MONTHS_HE[+mo-1].slice(0,3) + ' ' + y.slice(2); });
@@ -779,8 +861,8 @@ function renderTrends() {
     data: {
       labels,
       datasets: [
-        { label: 'הכנסות', data: incData, backgroundColor: 'rgba(0,191,165,.2)', borderColor: '#00BFA5', borderWidth: 2, borderRadius: 4 },
-        { label: 'הוצאות', data: expData, backgroundColor: 'rgba(244,67,54,.15)', borderColor: '#F44336', borderWidth: 2, borderRadius: 4 },
+        { label: 'הכנסות', data: incData, backgroundColor: 'rgba(43,151,65,.2)', borderColor: '#2B9741', borderWidth: 2, borderRadius: 4 },
+        { label: 'הוצאות', data: expData, backgroundColor: 'rgba(232,93,59,.15)', borderColor: '#E85D3B', borderWidth: 2, borderRadius: 4 },
       ]
     },
     options: {
@@ -793,7 +875,6 @@ function renderTrends() {
     }
   });
 
-  // Monthly summary table
   const tbody = document.getElementById('monthTbody');
   tbody.innerHTML = [...last12].reverse().map(m => {
     const cf  = allTx.filter(t => t.month === m && !t.excluded);
@@ -830,7 +911,7 @@ function renderTxView() {
     if (month  && t.month !== month)            return false;
     if (source && t.sourceType !== source)      return false;
     if (search) {
-      const haystack = (t.name + ' ' + t.category + ' ' + t.notes).toLowerCase();
+      const haystack = (t.name + ' ' + t.category + ' ' + (t.notes||'')).toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -846,19 +927,19 @@ function renderTxView() {
     const c    = getCat(t.category);
     const isPos = t.amount >= 0;
     const inst  = (t.instNum && t.instTotal) ? `<span class="inst">${t.instNum}/${t.instTotal}</span>` : '';
-    const note  = t.notes ? ` <span style="color:var(--muted)">· ${t.notes}</span>` : '';
+    const note  = t.notes ? ` <span style="color:var(--muted)">· ${escHtml(t.notes)}</span>` : '';
     const excl  = t.excluded ? `<span class="excl-badge">מחוץ לתזרים</span>` : '';
     return `
       <div class="tx-full">
         <div class="tx-icon" style="background:${c.bg}">${c.i}</div>
         <div class="tx-info">
-          <div class="tx-name">${inst}${t.name || 'לא ידוע'}${note}</div>
+          <div class="tx-name">${inst}${escHtml(t.name || 'לא ידוע')}${note}</div>
           <div class="tx-meta">${fmtDate(t.date)} · ${fmtMonth(t.month)} · ${fmtSourceType(t.sourceType)}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <div class="tx-amt ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : '-'}${fmtFull(t.amount)}</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
-            <span class="cat-badge" style="background:${c.bg};color:${c.c}">${t.category || ''}</span>
+            <span class="cat-badge" style="background:${c.bg};color:${c.c}">${escHtml(t.category || '')}</span>
             ${excl}
           </div>
         </div>
@@ -869,9 +950,6 @@ function renderTxView() {
 // ════════════════════════════════════════════
 // BANK AUTO-CONNECT
 // ════════════════════════════════════════════
-
-// When served directly from the local server (http://localhost:3001), use relative paths.
-// When on GitHub Pages (HTTPS), call http://localhost:3001 (Chrome allows HTTPS→HTTP for localhost).
 async function checkBankServer() {
   try {
     const res  = await fetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
@@ -882,14 +960,11 @@ async function checkBankServer() {
       ? `מחובר (${data.scrapers.join(', ')})`
       : 'שרת פעיל — הגדר פרטי בנק';
     document.getElementById('btnRefresh').style.display = data.configured ? 'flex' : 'none';
-    // Also show bank button on upload screen
     if (data.configured) {
       document.getElementById('bankBtnWrap').style.display = 'block';
       document.getElementById('bankBtnStatus').textContent =
-        `מחובר: ${data.scrapers.join(', ')} · לוחץ ימשוך נתונים מהבנק (1-2 דקות)`;
+        `מחובר: ${data.scrapers.join(', ')} · לחיצה תמשוך נתונים (1-2 דקות)`;
     }
-
-    // If served locally and no localStorage data yet → auto-load from server
     if (IS_LOCAL && !allTx.length && data.txCount > 0) {
       await loadFromServer(false);
     }
@@ -954,26 +1029,23 @@ function renderAccounts(data) {
     return;
   }
 
-  // Deduplicate: for credit cards with same provider, keep only the one with highest monthlyCharge
-  // (the other is usually a virtual/linked shadow account)
+  // Deduplicate: for credit cards with same provider, keep only highest monthlyCharge
   const seen = {};
   accounts = accounts.filter(a => {
     if (a.type !== 'credit') return true;
     const key = a.provider;
     if (!seen[key] || (a.monthlyCharge || 0) > (seen[key].monthlyCharge || 0)) {
       seen[key] = a;
-      return false; // will re-add from seen
+      return false;
     }
     return false;
   });
   accounts = [...accounts, ...Object.values(seen)];
-  // Re-sort: banks first, then credit
   accounts.sort((a, b) => (a.type === 'bank' ? -1 : 1) - (b.type === 'bank' ? -1 : 1));
 
   grid.innerHTML = accounts.map(a => {
     const isBanked   = a.type === 'bank';
     const hasBalance = a.balance !== null && a.balance !== undefined;
-    // For credit cards: use monthlyCharge computed server-side (sum of charges this month)
     const displayVal = hasBalance ? a.balance : (isBanked ? null : (a.monthlyCharge ?? null));
     const isNeg      = isBanked && displayVal !== null && displayVal < 0;
     const label      = isBanked ? 'יתרת עו"ש' : 'הוצאות החודש הנוכחי';
@@ -1028,7 +1100,6 @@ async function refreshAccounts() {
   setTimeout(() => { btn.textContent = '🔄 רענן נתוני חשבונות'; btn.disabled = false; }, 5000);
 }
 
-// When CSV is loaded, also save it to the local server (if running) for persistence
 async function syncCSVToServer(tx) {
   try {
     await fetch(BANK_SERVER + '/api/import', {
@@ -1056,19 +1127,18 @@ function init() {
   autoRefreshIfStale();
 }
 
-// Auto-refresh from bank in background if data is older than 4 hours
 async function autoRefreshIfStale() {
-  if (!IS_LOCAL) return; // only when server is running locally
+  if (!IS_LOCAL) return;
   try {
     const res  = await fetch('/api/status', { signal: AbortSignal.timeout(2000) });
     const data = await res.json();
     if (!data.configured || !data.lastUpdate) return;
     const ageHours = (Date.now() - new Date(data.lastUpdate)) / 3600000;
-    if (ageHours < 4) return; // fresh enough
+    if (ageHours < 4) return;
     console.log(`[auto] Data is ${ageHours.toFixed(1)}h old — refreshing from bank...`);
     const btn = document.getElementById('btnRefresh');
     if (btn) { btn.textContent = '⏳ מרענן...'; btn.disabled = true; }
-    const r2   = await fetch('/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const r2    = await fetch('/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data2 = await r2.json();
     if (data2.ok && data2.transactions?.length) {
       allTx = data2.transactions;
