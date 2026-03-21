@@ -915,7 +915,7 @@ async function refreshFromBank() {
   btn.textContent = '⏳ מרענן...';
   btn.disabled = true;
   try {
-    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(180000) });
+    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await res.json();
     if (data.ok && data.transactions?.length) {
       allTx = data.transactions;
@@ -1007,7 +1007,7 @@ async function refreshAccounts() {
   btn.textContent = '⏳ מושך נתונים... (1-2 דקות)';
   btn.disabled = true;
   try {
-    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(180000) });
+    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await res.json();
     if (data.ok) {
       if (data.transactions?.length) {
