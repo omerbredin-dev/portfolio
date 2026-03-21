@@ -1014,6 +1014,7 @@ async function refreshAccounts() {
         allTx = data.transactions;
         localStorage.setItem('finance_tx', JSON.stringify(allTx));
         buildState();
+        buildTxFilters();
         renderAll();
       }
       if (data.accounts) renderAccounts({ accounts: data.accounts, updatedAt: new Date() });
