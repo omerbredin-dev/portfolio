@@ -297,6 +297,7 @@
         <span class="status-dot" id="statusDot"></span>
         <span id="statusTxt">לא מחובר</span>
       </div>
+      <a id="localAppLink" href="http://localhost:3001" target="_blank" class="btn-sm btn-primary-sm" style="display:none;text-decoration:none;font-size:11px">🏠 פתח מקומי</a>
       <button class="btn-sm btn-ghost" onclick="triggerCSV()">📂</button>
       <button class="btn-sm btn-primary-sm" id="btnRefresh" onclick="refreshFromBank()" style="display:none">🔄 רענן</button>
     </div>
@@ -1559,6 +1560,15 @@ async function syncCSVToServer(tx) {
 // INIT
 // ════════════════════════════════════════════
 function init() {
+  // On GitHub Pages, Chrome blocks HTTP→localhost fetches (Private Network Access).
+  // Show the "Open Local App" button so the user can click to localhost:3001.
+  if (!IS_LOCAL) {
+    const link = document.getElementById('localAppLink');
+    if (link) link.style.display = '';
+    const txt = document.getElementById('statusTxt');
+    if (txt) txt.textContent = 'פתח מקומי לנתונים חיים';
+  }
+
   budgets      = JSON.parse(localStorage.getItem('finance_budgets')     || '{}');
   catOverrides = JSON.parse(localStorage.getItem('finance_cat_overrides') || '{}');
   const saved  = localStorage.getItem('finance_tx');
