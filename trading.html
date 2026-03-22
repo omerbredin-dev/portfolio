@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TradingEngine</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* Password gate */
+.pw-overlay{position:fixed;inset:0;z-index:99999;background:#0f1117;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.pw-overlay.hidden{display:none;}
+.pw-box{text-align:center;}
+.pw-box h2{color:#e8eaf6;font-size:22px;margin-bottom:8px;}
+.pw-box p{color:#7b82a8;font-size:13px;margin-bottom:16px;}
+.pw-box input{background:#1a1d27;border:1px solid #2e3350;border-radius:8px;color:#e8eaf6;padding:10px 16px;font-size:15px;width:240px;outline:none;text-align:center;}
+.pw-box input:focus{border-color:#5c7cfa;}
+.pw-box button{margin-left:8px;padding:10px 20px;background:#5c7cfa;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;}
+.pw-box .pw-err{color:#f56565;font-size:12px;margin-top:8px;min-height:16px;}
+.app-hidden{display:none!important;}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
+  --text:#e8eaf6;--muted:#7b82a8;--accent:#5c7cfa;--green:#3ecf8e;
+  --red:#f56565;--gold:#f6ad55;--radius:12px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh;}
+
+/* Header */
+header{background:linear-gradient(135deg,#1a1d27 0%,#0f1117 100%);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.logo{font-size:20px;font-weight:700;letter-spacing:-.5px;color:var(--text);}
+.logo span{color:var(--accent);}
+.header-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.capital-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.cap-item{font-size:12px;color:var(--muted);}
+.cap-item strong{color:var(--text);font-size:13px;}
+.cap-item .pos{color:var(--green);}
+.cap-item .neg{color:var(--red);}
+.fx-badge{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.fx-badge strong{color:var(--gold);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 5px var(--green);}
+.live-dot.loading{background:var(--gold);animation:pulse .8s infinite;}
+.live-dot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.refresh-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.refresh-btn:hover{border-color:var(--accent);}
+.spin{animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.last-updated{font-size:11px;color:var(--muted);}
+
+/* Setup guide */
+.setup-guide{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin:16px 24px;overflow:hidden;}
+.setup-guide-header{padding:12px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;}
+.setup-guide-header:hover{background:var(--surface2);}
+.setup-guide-body{padding:12px 16px;display:flex;gap:24px;flex-wrap:wrap;}
+.setup-item{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;}
+.setup-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
+.setup-item.done{color:var(--muted);text-decoration:line-through;}
+
+/* Tabs */
+.tabs-bar{display:flex;gap:4px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;}
+.tab-btn{padding:12px 16px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* Main */
+main{max-width:1400px;margin:0 auto;padding:24px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.card-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-grid{display:grid;gap:16px;}
+.card-grid-3{grid-template-columns:repeat(3,1fr);}
+.card-grid-2{grid-template-columns:repeat(2,1fr);}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;}
+.badge-poly{background:rgba(92,124,250,.2);color:var(--accent);}
+.badge-crypto{background:rgba(246,173,85,.2);color:var(--gold);}
+.badge-options{background:rgba(183,148,244,.2);color:#b794f4;}
+.badge-green{background:rgba(62,207,142,.15);color:var(--green);}
+.badge-red{background:rgba(245,101,101,.15);color:var(--red);}
+.badge-gold{background:rgba(246,173,85,.15);color:var(--gold);}
+.badge-muted{background:var(--surface2);color:var(--muted);}
+.badge-ai{background:rgba(92,124,250,.2);color:var(--accent);font-size:10px;}
+
+/* Edge score meter */
+.edge-meter{height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:4px;}
+.edge-fill{height:100%;border-radius:3px;transition:width .5s;}
+.edge-fill.high{background:var(--green);}
+.edge-fill.mid{background:var(--gold);}
+.edge-fill.low{background:var(--red);}
+
+/* Action card */
+.action-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;}
+.action-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.action-market{font-size:13px;font-weight:600;line-height:1.4;}
+.action-btns{display:flex;gap:8px;margin-top:4px;}
+.btn-execute{padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;}
+.btn-skip{padding:7px 14px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;font-size:12px;cursor:pointer;}
+.btn-execute:hover{background:#4a6be0;}
+.btn-skip:hover{border-color:var(--red);color:var(--red);}
+
+/* Market card (Polymarket) */
+.market-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;}
+.market-question{font-size:13px;font-weight:600;line-height:1.4;}
+.outcome-badges{display:flex;gap:6px;flex-wrap:wrap;}
+.outcome-badge{padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;}
+.outcome-yes{background:rgba(62,207,142,.15);color:var(--green);}
+.outcome-no{background:rgba(245,101,101,.15);color:var(--red);}
+.outcome-other{background:rgba(92,124,250,.15);color:var(--accent);}
+.market-meta{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;}
+
+/* Kelly calc */
+.kelly-calc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;}
+.kelly-calc label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+.kelly-calc input[type=range]{width:100%;accent-color:var(--accent);}
+.kelly-result{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;}
+.kelly-val{font-size:12px;color:var(--muted);}
+.kelly-val strong{color:var(--text);}
+
+/* Signal cards */
+.signal-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.signal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.signal-name{font-size:13px;font-weight:700;}
+.signal-body{font-size:12px;color:var(--muted);line-height:1.5;}
+.confidence{font-size:11px;margin-top:6px;}
+
+/* Price cards */
+.price-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.price-card .asset-name{font-size:13px;color:var(--muted);margin-bottom:4px;}
+.price-card .price-usd{font-size:22px;font-weight:700;}
+.price-card .price-ils{font-size:13px;color:var(--muted);}
+.price-card .changes{display:flex;gap:12px;margin-top:8px;}
+.chg-pos{color:var(--green);}
+.chg-neg{color:var(--red);}
+
+/* F&G */
+.fg-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;}
+.fg-number{font-size:48px;font-weight:900;margin:8px 0;}
+.fg-label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+.fg-history{display:flex;gap:4px;justify-content:center;margin-top:12px;}
+.fg-dot{width:8px;height:8px;border-radius:50%;}
+
+/* Table */
+.table-wrap{overflow-x:auto;margin-top:8px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid rgba(46,51,80,.5);vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.pnl-pos{color:var(--green);font-weight:600;}
+.pnl-neg{color:var(--red);font-weight:600;}
+
+/* Stats bar */
+.stats-bar{display:flex;gap:16px;flex-wrap:wrap;padding:16px;background:var(--surface2);border-radius:var(--radius);margin-top:16px;}
+.stat-item{flex:1;min-width:120px;}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.stat-val{font-size:18px;font-weight:700;margin-top:4px;}
+
+/* Watchlist editable */
+.watchlist-table td input{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;width:80px;}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.modal h3{font-size:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;}
+.modal-close:hover{color:var(--text);}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 12px;font-size:13px;outline:none;font-family:inherit;}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent);}
+.form-group textarea{resize:vertical;min-height:70px;}
+.seg-control{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.seg-btn{flex:1;padding:8px;background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.seg-btn.active{background:var(--accent);color:#fff;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.btn-primary{padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+.btn-primary:hover{background:#4a6be0;}
+.btn-secondary{padding:9px 20px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px;cursor:pointer;}
+.btn-secondary:hover{border-color:var(--accent);}
+
+/* Misc */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-title{font-size:15px;font-weight:700;}
+.count-badge{background:var(--accent);color:#fff;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700;}
+.empty-state{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+.stale-badge{background:rgba(246,173,85,.15);color:var(--gold);font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid rgba(246,173,85,.3);}
+.error-banner{background:rgba(245,101,101,.1);border:1px solid rgba(245,101,101,.3);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--red);margin-bottom:16px;}
+.info-banner{background:rgba(92,124,250,.1);border:1px solid rgba(92,124,250,.3);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--accent);margin-bottom:16px;}
+.sub-toggle{display:flex;gap:4px;margin-bottom:16px;}
+.sub-btn{padding:7px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--muted);}
+.sub-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:16px;margin:4px 0;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.budget-bar{background:var(--surface2);border-radius:var(--radius);padding:16px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;}
+.budget-item .b-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.budget-item .b-val{font-size:16px;font-weight:700;margin-top:3px;}
+.collapsible-section{margin-bottom:12px;}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 0;font-size:12px;color:var(--muted);}
+.collapsible-header:hover{color:var(--text);}
+.collapsible-body{padding-top:8px;}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+.filter-row select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 12px;font-size:12px;outline:none;}
+.filter-row label{font-size:12px;color:var(--muted);}
+.markets-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));}
+.signals-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+.log-type-badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;text-transform:uppercase;}
+.lt-open{background:rgba(92,124,250,.2);color:var(--accent);}
+.lt-close{background:rgba(62,207,142,.2);color:var(--green);}
+.lt-skip{background:rgba(246,173,85,.2);color:var(--gold);}
+.lt-system{background:var(--surface2);color:var(--muted);}
+@media(max-width:768px){
+  .card-grid-3{grid-template-columns:1fr;}
+  .card-grid-2{grid-template-columns:1fr;}
+  .capital-bar{gap:10px;}
+  main{padding:12px;}
+  .markets-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- Password Gate -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <h2>🔒 TradingEngine</h2>
+    <p>Enter password to access your trading dashboard</p>
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <input type="password" id="pwInput" placeholder="Password" autocomplete="off"/>
+      <button onclick="checkPw()">Enter</button>
+    </div>
+    <div class="pw-err" id="pwErr"></div>
+  </div>
+</div>
+
+<div id="appWrap" class="app-hidden">
+
+<!-- Header -->
+<header>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div class="logo">Trading<span>Engine</span></div>
+    <div class="capital-bar" id="capitalBar">
+      <div class="cap-item">Total <strong>₪10,000</strong></div>
+      <div class="cap-item">Deployed <strong id="capDeployed">₪0</strong></div>
+      <div class="cap-item">P&amp;L <strong id="capPnl" class="pos">₪0</strong></div>
+      <div class="cap-item">Win Rate <strong id="capWinRate">—</strong></div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="fx-badge">
+      <span class="live-dot loading" id="fxDot"></span>
+      USD/NIS <strong id="fxRate">—</strong>
+    </div>
+    <span class="last-updated" id="lastUpdated"></span>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+    <a href="index.html" style="color:var(--muted);font-size:12px;text-decoration:none;padding:6px 10px;border:1px solid var(--border);border-radius:8px;">← Portfolio</a>
+  </div>
+</header>
+
+<!-- Setup Guide -->
+<div class="setup-guide" id="setupGuide">
+  <div class="setup-guide-header" onclick="toggleSetup()">
+    <span>⚙️ Setup Checklist <span id="setupProgress" style="color:var(--muted);font-weight:400;font-size:12px"></span></span>
+    <span id="setupChevron">▼</span>
+  </div>
+  <div class="setup-guide-body" id="setupBody">
+    <label class="setup-item" id="si-metamask">
+      <input type="checkbox" onchange="saveSetupItem('metamask',this.checked)"/> MetaMask installed
+    </label>
+    <label class="setup-item" id="si-polymarket">
+      <input type="checkbox" onchange="saveSetupItem('polymarket',this.checked)"/> Polymarket account created
+    </label>
+    <label class="setup-item" id="si-exchange">
+      <input type="checkbox" onchange="saveSetupItem('exchange',this.checked)"/> Crypto exchange account (Binance/Kraken)
+    </label>
+    <label class="setup-item" id="si-firsttrade">
+      <input type="checkbox" onchange="saveSetupItem('firsttrade',this.checked)"/> First position entered
+    </label>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="setTab('brief')">📋 Brief</button>
+  <button class="tab-btn" onclick="setTab('poly')">🔮 Polymarket</button>
+  <button class="tab-btn" onclick="setTab('crypto')">₿ Crypto</button>
+  <button class="tab-btn" onclick="setTab('positions')">📊 Positions</button>
+  <button class="tab-btn" onclick="setTab('log')">📜 Log</button>
+</div>
+
+<main>
+
+<!-- TAB 1: Morning Brief -->
+<div class="tab-content active" id="tab-brief">
+  <!-- AI Brief Card -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">
+      🌅 AI Morning Brief
+      <span id="briefAiBadge" class="badge badge-muted" style="font-size:10px;">Rule-Based</span>
+    </div>
+    <div id="briefDate" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+    <div id="briefContent">
+      <div class="skeleton" style="width:80%"></div>
+      <div class="skeleton" style="width:60%;margin-top:6px"></div>
+      <div class="skeleton" style="width:70%;margin-top:6px"></div>
+    </div>
+    <div class="collapsible-section" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+      <div class="collapsible-header" onclick="toggleApiKey()">
+        <span>🔑 Add Claude API key for AI-powered briefs →</span>
+        <span id="apiKeyChevron">▼</span>
+      </div>
+      <div class="collapsible-body" id="apiKeyBody" style="display:none;">
+        <div style="display:flex;gap:8px;">
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;outline:none;"/>
+          <button class="btn-primary" onclick="saveApiKey()">Save</button>
+          <button class="btn-secondary" onclick="clearApiKey()">Clear</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:6px;">Key stored locally in your browser. Never sent anywhere except Claude API.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk Dashboard -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">🛡 Risk Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400;">— Two Sigma framework</span></div>
+    <div id="riskPanel" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:4px;"></div>
+  </div>
+
+  <!-- Action Queue -->
+  <div>
+    <div class="section-header">
+      <div class="section-title">⚡ Today's Action Queue <span class="count-badge" id="queueCount">0</span></div>
+      <button class="btn-secondary" onclick="openAddPositionModal()">+ Manual Add</button>
+    </div>
+    <div id="actionQueue">
+      <div class="empty-state">No actions queued. Scan Polymarket or Crypto tabs to find opportunities.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: Polymarket -->
+<div class="tab-content" id="tab-poly">
+  <div id="polySetupBanner" class="info-banner" style="display:none;">
+    ℹ️ Mark Polymarket as set up in the checklist above to enable full features.
+    <a href="https://polymarket.com" target="_blank" style="color:var(--accent);margin-left:8px;">Open Polymarket →</a>
+  </div>
+  <div id="polyErrorBanner" class="error-banner" style="display:none;"></div>
+
+  <div class="filter-row">
+    <label>Min Volume:</label>
+    <select id="polyVolFilter" onchange="renderPolyMarkets()">
+      <option value="0">Any</option>
+      <option value="1000">$1K+</option>
+      <option value="10000" selected>$10K+</option>
+      <option value="100000">$100K+</option>
+    </select>
+    <label>Closes within:</label>
+    <select id="polyTimeFilter" onchange="renderPolyMarkets()">
+      <option value="9999">Any</option>
+      <option value="7">7 days</option>
+      <option value="14">14 days</option>
+      <option value="30" selected>30 days</option>
+    </select>
+    <label>Sort by:</label>
+    <select id="polySortFilter" onchange="renderPolyMarkets()">
+      <option value="edge">Edge Score</option>
+      <option value="volume">Volume</option>
+      <option value="days">Days Left</option>
+    </select>
+    <span id="polyCount" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+  </div>
+
+  <!-- Contradiction Scanner -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">🔄 Contradiction Scanner
+      <span style="font-size:11px;color:var(--muted);font-weight:400;">— stat arb: finds logically mispriced pairs</span>
+    </div>
+    <div id="contradictionsGrid"><div class="empty-state">Scanning for contradictions…</div></div>
+  </div>
+
+  <div id="polyLoading" style="display:none;padding:40px;text-align:center;color:var(--muted);">Loading markets…</div>
+  <div class="markets-grid" id="polyMarketsGrid"></div>
+</div>
+
+<!-- TAB 3: Crypto -->
+<div class="tab-content" id="tab-crypto">
+  <div id="cryptoErrorBanner" class="error-banner" style="display:none;"></div>
+
+  <div class="card-grid card-grid-3" style="margin-bottom:16px;" id="marketPulse">
+    <!-- BTC, ETH, F&G cards rendered here -->
+    <div class="price-card"><div class="skeleton" style="height:60px"></div></div>
+    <div class="price-card"><div class="skeleton" style="height:60px"></div></div>
+    <div class="fg-card"><div class="skeleton" style="height:60px"></div></div>
+  </div>
+
+  <div class="section-header" style="margin-bottom:12px;">
+    <div class="section-title">📡 Signals</div>
+  </div>
+  <div class="signals-grid" id="signalsGrid" style="margin-bottom:24px;"></div>
+
+  <!-- Swing Watchlist -->
+  <div class="section-header">
+    <div class="section-title">👁 Swing Setup Watchlist</div>
+    <button class="btn-secondary" onclick="addWatchlistRow()" style="font-size:12px;">+ Add Asset</button>
+  </div>
+  <div class="table-wrap">
+    <table id="watchlistTable">
+      <thead><tr>
+        <th>Asset</th><th>Direction</th><th>Entry Zone</th><th>Target</th>
+        <th>Stop</th><th>R/R</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="watchlistBody"></tbody>
+    </table>
+  </div>
+
+  <div class="budget-bar" style="margin-top:16px;">
+    <div class="budget-item"><div class="b-label">Crypto Budget</div><div class="b-val">₪4,000</div></div>
+    <div class="budget-item"><div class="b-label">Deployed</div><div class="b-val" id="cryptoDeployed">₪0</div></div>
+    <div class="budget-item"><div class="b-label">Available</div><div class="b-val" id="cryptoAvailable" style="color:var(--green)">₪4,000</div></div>
+  </div>
+</div>
+
+<!-- TAB 4: Positions -->
+<div class="tab-content" id="tab-positions">
+  <div class="section-header">
+    <div class="sub-toggle">
+      <button class="sub-btn active" id="subOpen" onclick="setPositionsSub('open')">Open</button>
+      <button class="sub-btn" id="subClosed" onclick="setPositionsSub('closed')">Closed</button>
+    </div>
+    <button class="btn-primary" onclick="openAddPositionModal()">+ New Position</button>
+  </div>
+
+  <div id="openPositions">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Engine</th><th>Market/Asset</th><th>Dir</th>
+          <th>Entry</th><th>Current</th><th>P&amp;L ₪</th><th>P&amp;L %</th>
+          <th>Size ₪</th><th>Opened</th><th></th>
+        </tr></thead>
+        <tbody id="openPositionsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="closedPositions" style="display:none;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Engine</th><th>Market/Asset</th><th>Result</th>
+          <th>Entry</th><th>Exit</th><th>P&amp;L ₪</th><th>P&amp;L %</th>
+          <th>Duration</th><th>Closed</th>
+        </tr></thead>
+        <tbody id="closedPositionsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="posStatsBar">
+    <div class="stat-item"><div class="stat-label">Deployed</div><div class="stat-val" id="statDeployed">₪0</div></div>
+    <div class="stat-item"><div class="stat-label">Avg Size</div><div class="stat-val" id="statAvgSize">—</div></div>
+    <div class="stat-item"><div class="stat-label">Best Trade</div><div class="stat-val pnl-pos" id="statBest">—</div></div>
+    <div class="stat-item"><div class="stat-label">Worst Trade</div><div class="stat-val pnl-neg" id="statWorst">—</div></div>
+    <div class="stat-item"><div class="stat-label">Closed P&amp;L</div><div class="stat-val" id="statClosedPnl">₪0</div></div>
+  </div>
+</div>
+
+<!-- TAB 5: Log -->
+<div class="tab-content" id="tab-log">
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">📈 Account P&amp;L Chart</div>
+    <canvas id="pnlChart" height="200"></canvas>
+  </div>
+
+  <div class="card-grid card-grid-2" style="margin-bottom:16px;" id="analyticsCards">
+    <div class="card"><div class="card-title">Win Rate</div><div style="font-size:32px;font-weight:900;" id="analyticsWR">—</div><div style="font-size:12px;color:var(--muted)" id="analyticsWRSub"></div></div>
+    <div class="card"><div class="card-title">Avg Win</div><div style="font-size:32px;font-weight:900;color:var(--green);" id="analyticsAvgWin">₪0</div></div>
+    <div class="card"><div class="card-title">Avg Loss</div><div style="font-size:32px;font-weight:900;color:var(--red);" id="analyticsAvgLoss">₪0</div></div>
+    <div class="card"><div class="card-title">Expected Value</div><div style="font-size:32px;font-weight:900;" id="analyticsEV">₪0</div><div style="font-size:11px;color:var(--muted)">per trade</div></div>
+  </div>
+
+  <!-- Edge Decay Monitor (Renaissance backtesting framework) -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">🔬 Edge Health Monitor <span style="font-size:11px;color:var(--muted);font-weight:400;">— Renaissance decay detection</span></div>
+    <div id="edgeDecayCard"><div style="font-size:12px;color:var(--muted);">No closed trades yet.</div></div>
+  </div>
+
+  <div class="section-header" style="margin-bottom:12px;">
+    <div class="section-title">📋 Full Trade Log</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Type</th><th>Engine</th><th>Market/Asset</th>
+        <th>Action</th><th>Size ₪</th><th>P&amp;L ₪</th><th>Note</th>
+      </tr></thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:24px;">
+    <div class="section-title" style="margin-bottom:12px;">🚫 Skipped Trades Review</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Review these weekly to calibrate your judgment.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Market</th><th>Score</th><th>Skip Reason</th><th>Date</th></tr></thead>
+        <tbody id="skippedBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- /appWrap -->
+
+<!-- ADD POSITION MODAL -->
+<div class="modal-overlay hidden" id="addPositionModal">
+  <div class="modal">
+    <h3>+ New Position <button class="modal-close" onclick="closeModal('addPositionModal')">×</button></h3>
+    <div class="form-group">
+      <label>Engine</label>
+      <div class="seg-control">
+        <button class="seg-btn active" data-engine="POLYMARKET" onclick="setEngine(this,'POLYMARKET')">Polymarket</button>
+        <button class="seg-btn" data-engine="CRYPTO" onclick="setEngine(this,'CRYPTO')">Crypto</button>
+        <button class="seg-btn" data-engine="OPTIONS" onclick="setEngine(this,'OPTIONS')">Options</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Market / Asset</label>
+      <input type="text" id="posMarket" placeholder="e.g. BTC > $100K by Dec 2025"/>
+    </div>
+    <div class="form-group">
+      <label>Direction</label>
+      <div class="seg-control">
+        <button class="seg-btn active" data-dir="YES" onclick="setDirection(this,'YES')">YES / LONG</button>
+        <button class="seg-btn" data-dir="NO" onclick="setDirection(this,'NO')">NO / SHORT</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Entry Price / Probability</label>
+      <input type="number" id="posEntry" placeholder="0.65 for 65% or asset price" step="any"/>
+    </div>
+    <div class="form-group" id="posEstProbGroup">
+      <label>Your Estimated Probability (for Kelly) — <span id="posEstProbVal">50</span>%</label>
+      <input type="range" id="posEstProb" min="1" max="99" value="50" oninput="updateEstProb()"/>
+    </div>
+    <div class="form-group">
+      <label>Position Size (₪)</label>
+      <input type="number" id="posSizeNIS" placeholder="500" step="1"/>
+    </div>
+    <div class="form-group">
+      <label>Target Exit</label>
+      <input type="number" id="posTarget" placeholder="0.85 or target price" step="any"/>
+    </div>
+    <div class="form-group">
+      <label>Stop Loss (optional)</label>
+      <input type="number" id="posStop" placeholder="0.30 or stop price" step="any"/>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="posNotes" placeholder="Trade rationale…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('addPositionModal')">Cancel</button>
+      <button class="btn-primary" onclick="confirmAddPosition()">Confirm Position</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLOSE POSITION MODAL -->
+<div class="modal-overlay hidden" id="closePositionModal">
+  <div class="modal">
+    <h3>Close Position <button class="modal-close" onclick="closeModal('closePositionModal')">×</button></h3>
+    <input type="hidden" id="closePosId"/>
+    <div class="form-group">
+      <label>Market / Asset</label>
+      <input type="text" id="closePosMarket" readonly style="color:var(--muted)"/>
+    </div>
+    <div class="form-group">
+      <label>Entry Price</label>
+      <input type="text" id="closePosEntry" readonly style="color:var(--muted)"/>
+    </div>
+    <div class="form-group">
+      <label>Exit Price</label>
+      <input type="number" id="closePosExit" placeholder="Exit price/probability" step="any"/>
+    </div>
+    <div class="form-group">
+      <label>Outcome</label>
+      <div class="seg-control">
+        <button class="seg-btn active" data-outcome="win" onclick="setOutcome(this,'win')">WIN</button>
+        <button class="seg-btn" data-outcome="loss" onclick="setOutcome(this,'loss')">LOSS</button>
+        <button class="seg-btn" data-outcome="push" onclick="setOutcome(this,'push')">PUSH</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="closePosNotes" placeholder="Exit rationale…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('closePositionModal')">Cancel</button>
+      <button class="btn-primary" onclick="confirmClosePosition()">Confirm Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SKIP REASON MODAL -->
+<div class="modal-overlay hidden" id="skipModal">
+  <div class="modal">
+    <h3>Why are you skipping? <button class="modal-close" onclick="closeModal('skipModal')">×</button></h3>
+    <p style="font-size:12px;color:var(--gold);margin-bottom:16px;">⚠️ FORCED DISCIPLINE — required before dismissing</p>
+    <input type="hidden" id="skipQueueId"/>
+    <div class="form-group">
+      <label>Reason (required)</label>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="skipReasons">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="skipReason" value="Not confident in analysis"/> Not confident in analysis</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="skipReason" value="Need more research"/> Need more research</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="skipReason" value="Position too small"/> Position too small</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="skipReason" value="Capital constraint"/> Capital constraint</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="skipReason" value="Market resolves too far out"/> Market resolves too far out</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="skipReason" value="Other"/> Other</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <textarea id="skipNotes" placeholder="Any additional thoughts…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('skipModal')">Cancel</button>
+      <button class="btn-primary" onclick="confirmSkip()">Confirm Skip</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO WATCHLIST MODAL handled inline -->
+
+<script>
+// ============================================================
+// PASSWORD
+// ============================================================
+const PW_HASH = 'ab66bd48c30449aed11791f3e78752efb223549f8cc5a9842937d19292311c88';
+
+async function sha256(msg) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPw() {
+  const val = document.getElementById('pwInput').value;
+  const hash = await sha256(val);
+  if (hash === PW_HASH) {
+    localStorage.setItem('te_pw','1');
+    document.getElementById('pwOverlay').classList.add('hidden');
+    document.getElementById('appWrap').classList.remove('app-hidden');
+    init();
+  } else {
+    document.getElementById('pwErr').textContent = 'Incorrect password';
+  }
+}
+
+document.getElementById('pwInput').addEventListener('keydown', e => { if (e.key==='Enter') checkPw(); });
+
+if (localStorage.getItem('te_pw')==='1') {
+  document.getElementById('pwOverlay').classList.add('hidden');
+  document.getElementById('appWrap').classList.remove('app-hidden');
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const STATE_KEY = 'trading_engine_state';
+let state = {};
+let usdNis = 3.65;
+let cryptoData = null;
+let fngData = null;
+let polyMarkets = [];
+let pnlChartInstance = null;
+let _posEngine = 'POLYMARKET';
+let _posDir = 'YES';
+let _closeOutcome = 'win';
+let _pendingQueueId = null;
+let _setupOpen = false;
+let _apiKeyOpen = false;
+let _refreshTimer = null;
+
+function defaultState() {
+  return {
+    positions: [],
+    queue: [],
+    log: [],
+    watchlist: [
+      {asset:'BTC',direction:'LONG',entryZone:'',target:'',stop:'',rr:'',status:'Watching'},
+      {asset:'ETH',direction:'LONG',entryZone:'',target:'',stop:'',rr:'',status:'Watching'}
+    ],
+    settings: {
+      capitalNIS: 10000,
+      allocationPoly: 4000, allocationCrypto: 4000, allocationReserve: 2000,
+      claudeApiKey: '', polymarketSetup: false, cryptoSetup: false,
+      setupChecks: { metamask:false, polymarket:false, exchange:false, firsttrade:false }
+    },
+    pnlHistory: [{ date: new Date().toISOString().slice(0,10), valueNIS: 10000 }]
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (raw) {
+      state = JSON.parse(raw);
+      // Ensure all keys exist
+      const def = defaultState();
+      if (!state.positions) state.positions = def.positions;
+      if (!state.queue) state.queue = def.queue;
+      if (!state.log) state.log = def.log;
+      if (!state.watchlist) state.watchlist = def.watchlist;
+      if (!state.settings) state.settings = def.settings;
+      if (!state.settings.setupChecks) state.settings.setupChecks = def.settings.setupChecks;
+      if (!state.pnlHistory) state.pnlHistory = def.pnlHistory;
+    } else {
+      state = defaultState();
+    }
+  } catch(e) { state = defaultState(); }
+}
+
+function saveState() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function setTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  const tabs = ['brief','poly','crypto','positions','log'];
+  const idx = tabs.indexOf(name);
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  if (name === 'log') renderLog();
+  if (name === 'positions') renderPositions();
+  if (name === 'poly') renderPolyMarkets();
+}
+
+// ============================================================
+// SETUP GUIDE
+// ============================================================
+function toggleSetup() {
+  _setupOpen = !_setupOpen;
+  document.getElementById('setupBody').style.display = _setupOpen ? 'flex' : 'none';
+  document.getElementById('setupChevron').textContent = _setupOpen ? '▲' : '▼';
+}
+
+function saveSetupItem(key, val) {
+  state.settings.setupChecks[key] = val;
+  const si = document.getElementById('si-'+key);
+  if (si) si.classList.toggle('done', val);
+  saveState();
+  updateSetupProgress();
+}
+
+function updateSetupProgress() {
+  const checks = state.settings.setupChecks;
+  const keys = ['metamask','polymarket','exchange','firsttrade'];
+  const done = keys.filter(k => checks[k]).length;
+  document.getElementById('setupProgress').textContent = `(${done}/${keys.length} done)`;
+  keys.forEach(k => {
+    const chk = document.querySelector(`#si-${k} input`);
+    if (chk) chk.checked = !!checks[k];
+    const si = document.getElementById('si-'+k);
+    if (si) si.classList.toggle('done', !!checks[k]);
+  });
+}
+
+// ============================================================
+// API KEY
+// ============================================================
+function toggleApiKey() {
+  _apiKeyOpen = !_apiKeyOpen;
+  document.getElementById('apiKeyBody').style.display = _apiKeyOpen ? 'block' : 'none';
+  document.getElementById('apiKeyChevron').textContent = _apiKeyOpen ? '▲' : '▼';
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  state.settings.claudeApiKey = val;
+  saveState();
+  document.getElementById('briefAiBadge').textContent = val ? 'AI Powered' : 'Rule-Based';
+  document.getElementById('briefAiBadge').className = val ? 'badge badge-ai' : 'badge badge-muted';
+  alert(val ? 'API key saved.' : 'API key cleared.');
+}
+
+function clearApiKey() {
+  document.getElementById('apiKeyInput').value = '';
+  state.settings.claudeApiKey = '';
+  saveState();
+  document.getElementById('briefAiBadge').textContent = 'Rule-Based';
+  document.getElementById('briefAiBadge').className = 'badge badge-muted';
+}
+
+// ============================================================
+// FETCH HELPERS
+// ============================================================
+async function fetchUsdNis() {
+  const dot = document.getElementById('fxDot');
+  dot.className = 'live-dot loading';
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=ils');
+    const d = await r.json();
+    const rate = d['usd-coin']?.ils;
+    if (rate && rate > 2 && rate < 10) {
+      usdNis = rate;
+      dot.className = 'live-dot';
+      document.getElementById('fxRate').textContent = rate.toFixed(3);
+      return;
+    }
+  } catch(e) {}
+  // fallback
+  usdNis = 3.65;
+  dot.className = 'live-dot error';
+  document.getElementById('fxRate').textContent = '3.650*';
+}
+
+async function fetchCrypto() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,ils&include_24hr_change=true&include_7d_change=true');
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    cryptoData = await r.json();
+    document.getElementById('cryptoErrorBanner').style.display='none';
+    return true;
+  } catch(e) {
+    cryptoData = null;
+    document.getElementById('cryptoErrorBanner').style.display='block';
+    document.getElementById('cryptoErrorBanner').textContent = 'CoinGecko API error. Showing cached/fallback data. ' + e.message;
+    return false;
+  }
+}
+
+async function fetchFng() {
+  try {
+    const r = await fetch('https://api.alternative.me/fng/?limit=7');
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    fngData = await r.json();
+    return true;
+  } catch(e) {
+    fngData = null;
+    return false;
+  }
+}
+
+async function fetchPolymarkets() {
+  try {
+    const r = await fetch('https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=100&order=volume&ascending=false', {
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    polyMarkets = Array.isArray(d) ? d : [];
+    document.getElementById('polyErrorBanner').style.display='none';
+    return true;
+  } catch(e) {
+    polyMarkets = getSamplePolyMarkets();
+    document.getElementById('polyErrorBanner').style.display='block';
+    document.getElementById('polyErrorBanner').textContent =
+      'Polymarket API unavailable (CORS/network). Showing sample data. Try opening Polymarket directly or use a VPN. Error: '+e.message;
+    return false;
+  }
+}
+
+function getSamplePolyMarkets() {
+  return [
+    {id:'s1',question:'Will Bitcoin reach $150,000 by end of 2025?',volume:'850000',endDate:new Date(Date.now()+20*86400000).toISOString(),outcomePrices:['0.42','0.58'],outcomes:['Yes','No']},
+    {id:'s2',question:'Will the Fed cut rates in January 2026?',volume:'320000',endDate:new Date(Date.now()+12*86400000).toISOString(),outcomePrices:['0.35','0.65'],outcomes:['Yes','No']},
+    {id:'s3',question:'Will Ethereum ETF see $1B inflows this month?',volume:'75000',endDate:new Date(Date.now()+8*86400000).toISOString(),outcomePrices:['0.55','0.45'],outcomes:['Yes','No']},
+    {id:'s4',question:'Will Trump sign a crypto executive order in Q1 2026?',volume:'1200000',endDate:new Date(Date.now()+25*86400000).toISOString(),outcomePrices:['0.71','0.29'],outcomes:['Yes','No']},
+    {id:'s5',question:'Will the S&P 500 end 2026 above 6,500?',volume:'450000',endDate:new Date(Date.now()+45*86400000).toISOString(),outcomePrices:['0.48','0.52'],outcomes:['Yes','No']}
+  ];
+}
+
+// ============================================================
+// SCORE MARKET
+// ============================================================
+function scoreMarket(m) {
+  const vol = parseFloat(m.volume || 0);
+  const volScore = Math.min(100, (Math.log10(Math.max(vol, 1)) / 6) * 100);
+  const endMs = new Date(m.endDate || m.end_date_iso || m.endDateIso).getTime();
+  const daysLeft = (endMs - Date.now()) / 86400000;
+  let timingScore = 0;
+  if (daysLeft >= 5 && daysLeft <= 30) timingScore = 100 - Math.abs(daysLeft - 15) * 2;
+  else if (daysLeft > 30) timingScore = Math.max(0, 60 - (daysLeft - 30));
+  else timingScore = Math.max(0, daysLeft * 15);
+  timingScore = Math.max(0, Math.min(100, timingScore));
+  const prices = (m.outcomePrices || ['0.5']).map(p => parseFloat(p));
+  const maxPrice = Math.max(...prices);
+  const priceScore = maxPrice > 0.9 ? 10 : maxPrice < 0.1 ? 10 :
+    100 - Math.abs(maxPrice - 0.5) * 120;
+  const priceScoreClamped = Math.max(0, Math.min(100, priceScore));
+  return Math.round(volScore * 0.4 + timingScore * 0.35 + priceScoreClamped * 0.25);
+}
+
+// ============================================================
+// KELLY CALCULATOR
+// ============================================================
+function calcKelly(estProb, marketPrice, budgetNIS) {
+  const p = estProb / 100;
+  const q = 1 - p;
+  const b = (1 - marketPrice) / marketPrice; // payout odds
+  const kelly = (p * b - q) / b;
+  const halfKelly = Math.max(0, kelly / 2);
+  const sizeNIS = Math.round(halfKelly * budgetNIS);
+  const ev = p * (b * sizeNIS) - q * sizeNIS;
+  return { kelly: (halfKelly * 100).toFixed(1), sizeNIS, ev: ev.toFixed(0) };
+}
+
+// ============================================================
+// CONTRADICTION SCANNER (DE Shaw stat arb applied to Polymarket)
+// Finds pairs of markets with logically inconsistent prices
+// ============================================================
+function detectContradictions(markets) {
+  const results = [];
+  const STOP_WORDS = new Set(['will','the','a','an','in','on','at','by','for','to','of','and','or','is','be','this','that','from','with','have','has','its']);
+
+  function keywords(q) {
+    return q.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(' ')
+      .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+  }
+
+  // Group markets with significant keyword overlap
+  for (let i = 0; i < markets.length; i++) {
+    for (let j = i + 1; j < markets.length; j++) {
+      const m1 = markets[i], m2 = markets[j];
+      const kw1 = new Set(keywords(m1.question || ''));
+      const kw2 = new Set(keywords(m2.question || ''));
+      const shared = [...kw1].filter(w => kw2.has(w));
+      if (shared.length < 2) continue;
+
+      const p1 = parseFloat((m1.outcomePrices || ['0.5'])[0]);
+      const p2 = parseFloat((m2.outcomePrices || ['0.5'])[0]);
+
+      // Type A: Both YES > 100% combined → mutually exclusive events mispriced → short both
+      const sumYes = p1 + p2;
+      if (sumYes > 1.06) {
+        const edge = ((sumYes - 1) * 100).toFixed(1);
+        results.push({
+          type:'OVERPRICED', label:'Short Both YES',
+          m1: m1.question, m2: m2.question,
+          p1, p2, edge: +edge, shared,
+          action: `Both YES prices sum to ${(sumYes*100).toFixed(0)}% (impossible for mutual exclusives). Short BOTH — guaranteed ${edge}¢ per $1 pair.`,
+          color: 'var(--green)'
+        });
+      }
+
+      // Type B: Both NO > 100% combined → short both NO
+      const n1 = 1 - p1, n2 = 1 - p2;
+      const sumNo = n1 + n2;
+      if (sumNo > 1.06) {
+        const edge = ((sumNo - 1) * 100).toFixed(1);
+        results.push({
+          type:'UNDERPRICED', label:'Short Both NO',
+          m1: m1.question, m2: m2.question,
+          p1, p2, edge: +edge, shared,
+          action: `Both NO prices sum to ${(sumNo*100).toFixed(0)}%. Short BOTH NO sides — guaranteed ${edge}¢ per $1 pair.`,
+          color: 'var(--gold)'
+        });
+      }
+
+      // Type C: One market price implies the other should be higher/lower
+      // e.g., "X in Q1" > "X in full year" (Q1 can't have higher prob than full year)
+      const q1m1 = /q1|january|february|march/i.test(m1.question);
+      const q1m2 = /q1|january|february|march/i.test(m2.question);
+      const yrm1 = /2026|2027|year|annual/i.test(m1.question);
+      const yrm2 = /2026|2027|year|annual/i.test(m2.question);
+      if ((q1m1 && yrm2 && p1 > p2 + 0.08) || (q1m2 && yrm1 && p2 > p1 + 0.08)) {
+        const [sub, full, ps, pf] = q1m1 ? [m1.question, m2.question, p1, p2] : [m2.question, m1.question, p2, p1];
+        results.push({
+          type:'TIMEFRAME', label:'Timeframe Mismatch',
+          m1: sub, m2: full,
+          p1: ps, p2: pf, edge: +((ps-pf)*100).toFixed(1), shared,
+          action: `Subset market (${(ps*100).toFixed(0)}%) priced ABOVE full-year market (${(pf*100).toFixed(0)}%) — impossible. Sell subset, buy full-year.`,
+          color: 'var(--accent)'
+        });
+      }
+    }
+    if (results.length >= 5) break;
+  }
+
+  return results.sort((a,b) => b.edge - a.edge).slice(0,5);
+}
+
+function renderContradictions() {
+  const el = document.getElementById('contradictionsGrid');
+  if (!polyMarkets.length) { el.innerHTML = '<div class="empty-state">Load Polymarket data to scan for contradictions.</div>'; return; }
+  const arbs = detectContradictions(polyMarkets);
+  if (!arbs.length) {
+    el.innerHTML = '<div class="empty-state" style="color:var(--muted);">No clear contradictions found in current markets. Check again after refresh.</div>';
+    return;
+  }
+  el.innerHTML = arbs.map(a => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:rgba(62,207,142,.15);color:${a.color};font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">${a.label}</span>
+        <span style="color:var(--green);font-weight:700;font-size:13px;">+${a.edge}¢ edge</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">Keywords: ${a.shared.slice(0,3).join(', ')}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Market 1 <strong style="color:var(--text)">(YES: ${(a.p1*100).toFixed(0)}%)</strong>: ${a.m1.substring(0,80)}${a.m1.length>80?'…':''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Market 2 <strong style="color:var(--text)">(YES: ${(a.p2*100).toFixed(0)}%)</strong>: ${a.m2.substring(0,80)}${a.m2.length>80?'…':''}</div>
+      <div style="font-size:12px;color:var(--gold);background:rgba(246,173,85,.08);border-radius:6px;padding:8px;">💡 ${a.action}</div>
+    </div>`).join('');
+}
+
+// ============================================================
+// RISK DASHBOARD (Two Sigma framework)
+// ============================================================
+function renderRiskPanel() {
+  const el = document.getElementById('riskPanel');
+
+  // Current portfolio value from pnlHistory
+  const hist = state.pnlHistory || [];
+  const peak = Math.max(...hist.map(h => h.valueNIS), 10000);
+  const current = hist.length ? hist[hist.length-1].valueNIS : 10000;
+  const drawdown = ((peak - current) / peak * 100);
+
+  // Deployed capital
+  const openPositions = state.positions.filter(p => p.status === 'open');
+  const deployed = openPositions.reduce((s,p) => s + (p.sizeNIS||0), 0);
+  const deployedPct = (deployed / 10000 * 100).toFixed(0);
+
+  // Win rate from closed trades
+  const closed = state.positions.filter(p => p.status === 'closed');
+  const wins = closed.filter(p => (p.pnlNIS||0) > 0).length;
+  const winRate = closed.length ? (wins/closed.length*100).toFixed(0) : null;
+
+  // Simple VaR: 2x average loss on open positions
+  const avgLoss = closed.length ? Math.abs(closed.filter(p=>(p.pnlNIS||0)<0).reduce((s,p)=>s+(p.pnlNIS||0),0) / Math.max(1,closed.filter(p=>(p.pnlNIS||0)<0).length)) : 0;
+  const varEst = (avgLoss * 2).toFixed(0);
+
+  // Risk status
+  const riskLevel = drawdown > 20 ? ['🔴 DANGER', 'var(--red)'] : drawdown > 10 ? ['🟡 CAUTION', 'var(--gold)'] : ['🟢 SAFE', 'var(--green)'];
+
+  el.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">STATUS</div>
+      <div style="font-size:15px;font-weight:700;color:${riskLevel[1]}">${riskLevel[0]}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">DRAWDOWN</div>
+      <div style="font-size:15px;font-weight:700;color:${drawdown>10?'var(--red)':'var(--green)'}">${drawdown.toFixed(1)}%</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">DEPLOYED</div>
+      <div style="font-size:15px;font-weight:700;color:${deployedPct>60?'var(--gold)':'var(--text)'}">${deployedPct}%</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">WIN RATE</div>
+      <div style="font-size:15px;font-weight:700;color:${!winRate?'var(--muted)':winRate>=55?'var(--green)':winRate>=45?'var(--gold)':'var(--red)'}">${winRate ? winRate+'%' : '—'}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">95% VaR</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">₪${varEst||'—'}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">OPEN TRADES</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">${openPositions.length}</div>
+    </div>`;
+}
+
+// ============================================================
+// BRIEF TAB RENDER
+// ============================================================
+function renderBrief() {
+  const now = new Date();
+  document.getElementById('briefDate').textContent =
+    now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const hasApiKey = !!state.settings.claudeApiKey;
+  document.getElementById('briefAiBadge').textContent = hasApiKey ? 'AI Powered' : 'Rule-Based';
+  document.getElementById('briefAiBadge').className = hasApiKey ? 'badge badge-ai' : 'badge badge-muted';
+  if (hasApiKey) {
+    document.getElementById('apiKeyInput').value = state.settings.claudeApiKey;
+  }
+
+  const bullets = [];
+  // FnG analysis
+  if (fngData?.data?.[0]) {
+    const fg = parseInt(fngData.data[0].value);
+    const fgLabel = fngData.data[0].value_classification;
+    if (fg < 25) bullets.push(`<li>🟢 Fear & Greed at <strong>${fg} (${fgLabel})</strong> — extreme fear zone, historically a strong crypto entry signal.</li>`);
+    else if (fg > 75) bullets.push(`<li>🔴 Fear & Greed at <strong>${fg} (${fgLabel})</strong> — greed zone, consider taking profits on existing positions.</li>`);
+    else bullets.push(`<li>🟡 Fear & Greed at <strong>${fg} (${fgLabel})</strong> — neutral sentiment, no strong directional bias.</li>`);
+  } else {
+    bullets.push('<li>⚪ Fear & Greed data unavailable — check alternative.me for current sentiment.</li>');
+  }
+
+  // BTC analysis
+  if (cryptoData?.bitcoin) {
+    const btc = cryptoData.bitcoin;
+    const chg24 = btc.usd_24h_change || 0;
+    if (chg24 > 5) bullets.push(`<li>🟢 BTC up <strong>${chg24.toFixed(1)}%</strong> in 24h — strong momentum, trend is bullish.</li>`);
+    else if (chg24 < -5) bullets.push(`<li>🔴 BTC down <strong>${Math.abs(chg24).toFixed(1)}%</strong> in 24h — selling pressure, watch key support levels.</li>`);
+    else bullets.push(`<li>🟡 BTC <strong>${chg24 >= 0 ? '+' : ''}${chg24.toFixed(1)}%</strong> in 24h — range-bound, wait for breakout confirmation.</li>`);
+    bullets.push(`<li>📊 BTC current price: <strong>$${btc.usd?.toLocaleString()}</strong> (₪${(btc.usd * usdNis)?.toLocaleString('he-IL',{maximumFractionDigits:0})})</li>`);
+  } else {
+    bullets.push('<li>⚪ BTC price data unavailable — CoinGecko API may be rate-limited.</li>');
+  }
+
+  // Polymarket top opportunity
+  if (polyMarkets.length > 0) {
+    const topMarket = [...polyMarkets].sort((a,b) => scoreMarket(b) - scoreMarket(a))[0];
+    const score = scoreMarket(topMarket);
+    bullets.push(`<li>🔮 Top Polymarket opportunity: <strong>"${topMarket.question?.substring(0,60)}..."</strong> Edge Score: ${score}</li>`);
+  }
+
+  // Queue
+  const qLen = state.queue.length;
+  if (qLen > 0) {
+    bullets.push(`<li>⚡ <strong>${qLen} trade${qLen>1?'s':''}</strong> in your action queue waiting for execution.</li>`);
+  } else {
+    bullets.push('<li>📋 Action queue is empty — scan Polymarket and Crypto tabs to find opportunities.</li>');
+  }
+
+  document.getElementById('briefContent').innerHTML = `<ul style="padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.6;">${bullets.join('')}</ul>`;
+
+  renderRiskPanel();
+  renderActionQueue();
+}
+
+function renderActionQueue() {
+  const container = document.getElementById('actionQueue');
+  document.getElementById('queueCount').textContent = state.queue.length;
+
+  if (!state.queue.length) {
+    container.innerHTML = '<div class="empty-state">No actions queued. Find opportunities in Polymarket or Crypto tabs.</div>';
+    return;
+  }
+
+  container.innerHTML = state.queue.map(item => {
+    const scoreColor = item.edgeScore >= 70 ? 'high' : item.edgeScore >= 40 ? 'mid' : 'low';
+    const engineBadge = item.engine === 'POLYMARKET' ? 'badge-poly' : item.engine === 'CRYPTO' ? 'badge-crypto' : 'badge-options';
+    return `<div class="action-card">
+      <div class="action-card-header">
+        <div>
+          <span class="badge ${engineBadge}">${item.engine}</span>
+          <div class="action-market" style="margin-top:6px;">${item.market}</div>
+        </div>
+        <div style="text-align:right;min-width:80px;">
+          <div style="font-size:20px;font-weight:900;color:${item.edgeScore>=70?'var(--green)':item.edgeScore>=40?'var(--gold)':'var(--red)'}">${item.edgeScore}</div>
+          <div style="font-size:10px;color:var(--muted);">Edge Score</div>
+        </div>
+      </div>
+      <div class="edge-meter"><div class="edge-fill ${scoreColor}" style="width:${item.edgeScore}%"></div></div>
+      <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap;">
+        <span style="color:var(--muted);">Rec. Size: <strong style="color:var(--text)">₪${item.recSizeNIS||0}</strong></span>
+        <span style="color:var(--muted);">EV: <strong style="color:${item.expectedValue>=0?'var(--green)':'var(--red)'}">₪${item.expectedValue||0}</strong></span>
+        <span style="color:var(--muted);">Kelly formula: f* = (p·b − q)/b, half-Kelly applied</span>
+      </div>
+      <div class="action-btns">
+        <button class="btn-execute" onclick="executeQueueItem('${item.id}')">✓ Execute</button>
+        <button class="btn-skip" onclick="skipQueueItem('${item.id}')">✗ Skip</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function executeQueueItem(id) {
+  const item = state.queue.find(q => q.id === id);
+  if (!item) return;
+  openAddPositionModal(item);
+}
+
+function skipQueueItem(id) {
+  _pendingQueueId = id;
+  document.getElementById('skipQueueId').value = id;
+  document.querySelectorAll('input[name=skipReason]').forEach(r => r.checked = false);
+  document.getElementById('skipNotes').value = '';
+  openModal('skipModal');
+}
+
+function confirmSkip() {
+  const reason = document.querySelector('input[name=skipReason]:checked')?.value;
+  if (!reason) { alert('Please select a reason.'); return; }
+  const id = document.getElementById('skipQueueId').value;
+  const item = state.queue.find(q => q.id === id);
+  if (!item) return;
+
+  const note = document.getElementById('skipNotes').value;
+  state.log.unshift({
+    id: uid(), timestamp: new Date().toISOString(),
+    type: 'skip', engine: item.engine, market: item.market,
+    sizeNIS: item.recSizeNIS, pnlNIS: 0, note,
+    skipReason: reason, edgeScore: item.edgeScore
+  });
+  state.queue = state.queue.filter(q => q.id !== id);
+  saveState();
+  closeModal('skipModal');
+  renderActionQueue();
+  document.getElementById('queueCount').textContent = state.queue.length;
+}
+
+// ============================================================
+// POLYMARKET TAB
+// ============================================================
+function renderPolyMarkets() {
+  const minVol = parseFloat(document.getElementById('polyVolFilter').value);
+  const maxDays = parseFloat(document.getElementById('polyTimeFilter').value);
+  const sortBy = document.getElementById('polySortFilter').value;
+
+  let markets = polyMarkets.filter(m => {
+    const vol = parseFloat(m.volume || 0);
+    if (vol < minVol) return false;
+    const endMs = new Date(m.endDate || m.end_date_iso || m.endDateIso).getTime();
+    const daysLeft = (endMs - Date.now()) / 86400000;
+    if (daysLeft > maxDays) return false;
+    return true;
+  });
+
+  markets = markets.map(m => ({...m, _score: scoreMarket(m), _days: (new Date(m.endDate||m.end_date_iso||m.endDateIso).getTime()-Date.now())/86400000}));
+
+  if (sortBy === 'edge') markets.sort((a,b) => b._score - a._score);
+  else if (sortBy === 'volume') markets.sort((a,b) => parseFloat(b.volume||0) - parseFloat(a.volume||0));
+  else markets.sort((a,b) => a._days - b._days);
+
+  document.getElementById('polyCount').textContent = `${markets.length} markets`;
+  renderContradictions();
+
+  if (!markets.length) {
+    document.getElementById('polyMarketsGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1">No markets match filters.</div>';
+    return;
+  }
+
+  document.getElementById('polyMarketsGrid').innerHTML = markets.slice(0, 30).map(m => {
+    const outcomes = m.outcomes || ['Yes','No'];
+    const prices = (m.outcomePrices || ['0.5','0.5']).map(p => parseFloat(p));
+    const vol = parseFloat(m.volume||0);
+    const volFmt = vol >= 1000000 ? '$'+(vol/1000000).toFixed(1)+'M' : vol >= 1000 ? '$'+(vol/1000).toFixed(0)+'K' : '$'+vol.toFixed(0);
+    const days = Math.max(0, m._days).toFixed(0);
+    const scoreColor = m._score >= 70 ? 'high' : m._score >= 40 ? 'mid' : 'low';
+
+    const outcomeBadges = outcomes.map((o,i) => {
+      const pct = ((prices[i]||0)*100).toFixed(0);
+      const cls = i===0 ? 'outcome-yes' : i===1 ? 'outcome-no' : 'outcome-other';
+      return `<span class="outcome-badge ${cls}">${o}: ${pct}%</span>`;
+    }).join('');
+
+    // Kelly calc for YES option
+    const mktPrice = prices[0] || 0.5;
+    const kelly50 = calcKelly(50, mktPrice, state.settings.allocationPoly);
+
+    return `<div class="market-card">
+      <div class="market-question">${m.question}</div>
+      <div class="outcome-badges">${outcomeBadges}</div>
+      <div class="market-meta">
+        <span>Vol: ${volFmt}</span>
+        <span>Closes: ${days} days</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Edge Score</div>
+          <div class="edge-meter"><div class="edge-fill ${scoreColor}" style="width:${m._score}%"></div></div>
+        </div>
+        <div style="font-size:20px;font-weight:900;color:${m._score>=70?'var(--green)':m._score>=40?'var(--gold)':'var(--red)'}">${m._score}</div>
+      </div>
+      <div class="kelly-calc">
+        <label>Your estimated probability for YES: <span id="kp_${m.id}">50</span>%</label>
+        <input type="range" min="1" max="99" value="50" oninput="updateKelly('${m.id}',this.value,${mktPrice})"/>
+        <div class="kelly-result">
+          <span class="kelly-val">Kelly: <strong id="kk_${m.id}">${kelly50.kelly}%</strong></span>
+          <span class="kelly-val">Size: <strong id="ks_${m.id}">₪${kelly50.sizeNIS}</strong></span>
+          <span class="kelly-val">EV: <strong id="ke_${m.id}" style="color:${kelly50.ev>=0?'var(--green)':'var(--red)'}">₪${kelly50.ev}</strong></span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Kelly = (p·b − q)/b, half-Kelly, from ₪${state.settings.allocationPoly} Polymarket budget</div>
+      </div>
+      <button class="btn-execute" style="width:100%;" onclick="addMarketToQueue('${m.id}')">+ Add to Queue</button>
+    </div>`;
+  }).join('');
+}
+
+function updateKelly(mId, pctStr, mktPrice) {
+  const pct = parseFloat(pctStr);
+  document.getElementById('kp_'+mId).textContent = pct.toFixed(0);
+  const r = calcKelly(pct, mktPrice, state.settings.allocationPoly);
+  document.getElementById('kk_'+mId).textContent = r.kelly+'%';
+  document.getElementById('ks_'+mId).textContent = '₪'+r.sizeNIS;
+  const evEl = document.getElementById('ke_'+mId);
+  evEl.textContent = '₪'+r.ev;
+  evEl.style.color = parseFloat(r.ev)>=0 ? 'var(--green)' : 'var(--red)';
+}
+
+function addMarketToQueue(mId) {
+  const m = polyMarkets.find(x => String(x.id) === String(mId));
+  if (!m) return;
+  if (state.queue.find(q => q.source_id === mId)) {
+    alert('Already in queue.'); return;
+  }
+  const score = scoreMarket(m);
+  const prices = (m.outcomePrices||['0.5']).map(p=>parseFloat(p));
+  const r = calcKelly(50, prices[0]||0.5, state.settings.allocationPoly);
+  const item = {
+    id: uid(), source_id: mId, engine: 'POLYMARKET',
+    market: m.question?.substring(0,80),
+    edgeScore: score, recSizeNIS: r.sizeNIS,
+    expectedValue: parseInt(r.ev), addedAt: new Date().toISOString(), source:'polymarket'
+  };
+  state.queue.push(item);
+  saveState();
+  document.getElementById('queueCount').textContent = state.queue.length;
+  alert('Added to queue!');
+}
+
+// ============================================================
+// CRYPTO TAB
+// ============================================================
+function renderCryptoTab() {
+  renderMarketPulse();
+  renderSignals();
+  renderWatchlist();
+  renderCryptoBudget();
+}
+
+function renderMarketPulse() {
+  const container = document.getElementById('marketPulse');
+  if (!cryptoData) {
+    // Fallback
+    const fallback = {bitcoin:{usd:95000,ils:347000,usd_24h_change:1.2,usd_7d_change:3.5},ethereum:{usd:3200,ils:11680,usd_24h_change:0.8,usd_7d_change:2.1}};
+    cryptoData = fallback;
+  }
+  const btc = cryptoData.bitcoin || {};
+  const eth = cryptoData.ethereum || {};
+  const fg = fngData?.data?.[0] || {value:'50',value_classification:'Neutral'};
+  const fgVal = parseInt(fg.value);
+  const fgColor = fgVal < 25 ? 'var(--green)' : fgVal < 45 ? 'var(--gold)' : fgVal < 55 ? 'var(--muted)' : fgVal < 75 ? 'var(--gold)' : 'var(--red)';
+
+  const fgHistory = fngData?.data?.slice(0,7).reverse() || [];
+
+  container.innerHTML = `
+    <div class="price-card">
+      <div class="asset-name">Bitcoin (BTC)</div>
+      <div class="price-usd">$${(btc.usd||0).toLocaleString()}</div>
+      <div class="price-ils">₪${((btc.ils||btc.usd*usdNis)||0).toLocaleString('he-IL',{maximumFractionDigits:0})}</div>
+      <div class="changes">
+        <span style="font-size:12px;color:var(--muted)">24h: <strong class="${(btc.usd_24h_change||0)>=0?'chg-pos':'chg-neg'}">${(btc.usd_24h_change||0)>=0?'+':''}${(btc.usd_24h_change||0).toFixed(2)}%</strong></span>
+        <span style="font-size:12px;color:var(--muted)">7d: <strong class="${(btc.usd_7d_change||0)>=0?'chg-pos':'chg-neg'}">${(btc.usd_7d_change||0)>=0?'+':''}${(btc.usd_7d_change||0).toFixed(2)}%</strong></span>
+      </div>
+    </div>
+    <div class="price-card">
+      <div class="asset-name">Ethereum (ETH)</div>
+      <div class="price-usd">$${(eth.usd||0).toLocaleString()}</div>
+      <div class="price-ils">₪${((eth.ils||eth.usd*usdNis)||0).toLocaleString('he-IL',{maximumFractionDigits:0})}</div>
+      <div class="changes">
+        <span style="font-size:12px;color:var(--muted)">24h: <strong class="${(eth.usd_24h_change||0)>=0?'chg-pos':'chg-neg'}">${(eth.usd_24h_change||0)>=0?'+':''}${(eth.usd_24h_change||0).toFixed(2)}%</strong></span>
+        <span style="font-size:12px;color:var(--muted)">7d: <strong class="${(eth.usd_7d_change||0)>=0?'chg-pos':'chg-neg'}">${(eth.usd_7d_change||0)>=0?'+':''}${(eth.usd_7d_change||0).toFixed(2)}%</strong></span>
+      </div>
+    </div>
+    <div class="fg-card">
+      <div style="font-size:12px;color:var(--muted);">Fear & Greed Index</div>
+      <div class="fg-number" style="color:${fgColor}">${fgVal}</div>
+      <div class="fg-label" style="color:${fgColor}">${fg.value_classification}</div>
+      <div class="fg-history">
+        ${fgHistory.map(d=>{
+          const v=parseInt(d.value);
+          const c=v<25?'#3ecf8e':v<45?'#f6ad55':v<55?'#7b82a8':v<75?'#f6ad55':'#f56565';
+          return `<div class="fg-dot" style="background:${c}" title="${d.value_classification}: ${d.value}"></div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">last 7 days</div>
+    </div>`;
+}
+
+function renderSignals() {
+  const btc = cryptoData?.bitcoin || {};
+  const eth = cryptoData?.ethereum || {};
+  const fg = fngData?.data?.[0] ? parseInt(fngData.data[0].value) : 50;
+  const chg24 = btc.usd_24h_change || 0;
+  const chg7 = btc.usd_7d_change || 0;
+
+  const signals = [];
+
+  // Momentum
+  const momBull = chg24 > 0 && chg7 > 0;
+  const momBear = chg24 < 0 && chg7 < 0;
+  signals.push({
+    name: '📈 Momentum Signal', icon:'',
+    status: momBull ? 'BULLISH' : momBear ? 'BEARISH' : 'NEUTRAL',
+    statusClass: momBull ? 'badge-green' : momBear ? 'badge-red' : 'badge-muted',
+    body: `BTC 24h: ${chg24.toFixed(1)}%, 7d: ${chg7.toFixed(1)}%. ${momBull?'Both timeframes positive — trend is up.':momBear?'Both timeframes negative — trend is down.':'Mixed signals across timeframes.'}`,
+    confidence: Math.abs(chg24) > 3 ? 'High' : Math.abs(chg24) > 1 ? 'Medium' : 'Low'
+  });
+
+  // Sentiment
+  const sentBull = fg < 30;
+  const sentBear = fg > 70;
+  signals.push({
+    name: '😱 Sentiment Signal',
+    status: sentBull ? 'BULLISH' : sentBear ? 'BEARISH' : 'NEUTRAL',
+    statusClass: sentBull ? 'badge-green' : sentBear ? 'badge-red' : 'badge-muted',
+    body: `Fear & Greed: ${fg}. ${sentBull?'Extreme fear — contrarian buy signal. Markets tend to recover.':sentBear?'Extreme greed — potential local top, consider trimming.':'Neutral sentiment, no strong contrarian signal.'}`,
+    confidence: fg < 20 || fg > 80 ? 'High' : fg < 35 || fg > 65 ? 'Medium' : 'Low'
+  });
+
+  // Volatility
+  const isVol = Math.abs(chg24) > 5;
+  signals.push({
+    name: '⚡ Volatility Signal',
+    status: isVol ? (chg24 > 0 ? 'BULLISH' : 'BEARISH') : 'NEUTRAL',
+    statusClass: isVol ? (chg24 > 0 ? 'badge-green' : 'badge-red') : 'badge-muted',
+    body: `24h move: ${Math.abs(chg24).toFixed(1)}%. ${isVol?`High volatility detected (${chg24>0?'upside':'downside'} breakout). Manage position size carefully.`:'Low volatility — market consolidating. Wait for breakout.'}`,
+    confidence: Math.abs(chg24) > 8 ? 'High' : isVol ? 'Medium' : 'Low'
+  });
+
+  // Composite
+  let compScore = 50;
+  if (fg < 30) compScore += 20; else if (fg > 70) compScore -= 20;
+  if (chg24 > 3) compScore += 15; else if (chg24 < -3) compScore -= 15;
+  if (chg7 > 5) compScore += 15; else if (chg7 < -5) compScore -= 15;
+  compScore = Math.max(0, Math.min(100, compScore));
+  signals.push({
+    name: '🎯 Setup Quality',
+    status: compScore >= 65 ? 'BULLISH' : compScore <= 35 ? 'BEARISH' : 'NEUTRAL',
+    statusClass: compScore >= 65 ? 'badge-green' : compScore <= 35 ? 'badge-red' : 'badge-muted',
+    body: `Composite score: ${compScore}/100. Weighs sentiment, momentum and volatility. ${compScore>=65?'Good entry conditions.':compScore<=35?'Poor conditions, wait.':'Mixed market environment.'}`,
+    confidence: compScore > 75 || compScore < 25 ? 'High' : compScore > 60 || compScore < 40 ? 'Medium' : 'Low'
+  });
+
+  document.getElementById('signalsGrid').innerHTML = signals.map(s => `
+    <div class="signal-card">
+      <div class="signal-header">
+        <div class="signal-name">${s.name}</div>
+        <span class="badge ${s.statusClass}">${s.status}</span>
+      </div>
+      <div class="signal-body">${s.body}</div>
+      <div class="confidence" style="color:var(--muted)">Confidence: <strong style="color:var(--text)">${s.confidence}</strong></div>
+    </div>`).join('');
+}
+
+function renderWatchlist() {
+  const tbody = document.getElementById('watchlistBody');
+  tbody.innerHTML = state.watchlist.map((row, i) => `
+    <tr>
+      <td><input value="${row.asset||''}" onchange="updateWatchlist(${i},'asset',this.value)" style="width:60px"/></td>
+      <td>
+        <select onchange="updateWatchlist(${i},'direction',this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;">
+          <option ${row.direction==='LONG'?'selected':''}>LONG</option>
+          <option ${row.direction==='SHORT'?'selected':''}>SHORT</option>
+        </select>
+      </td>
+      <td><input value="${row.entryZone||''}" placeholder="e.g. 90k-95k" onchange="updateWatchlist(${i},'entryZone',this.value)" style="width:90px"/></td>
+      <td><input value="${row.target||''}" onchange="updateWatchlist(${i},'target',this.value)" style="width:70px"/></td>
+      <td><input value="${row.stop||''}" onchange="updateWatchlist(${i},'stop',this.value)" style="width:70px"/></td>
+      <td><input value="${row.rr||''}" placeholder="2:1" onchange="updateWatchlist(${i},'rr',this.value)" style="width:50px"/></td>
+      <td>
+        <select onchange="updateWatchlist(${i},'status',this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;">
+          <option ${row.status==='Watching'?'selected':''}>Watching</option>
+          <option ${row.status==='Ready'?'selected':''}>Ready</option>
+          <option ${row.status==='Active'?'selected':''}>Active</option>
+          <option ${row.status==='Skip'?'selected':''}>Skip</option>
+        </select>
+      </td>
+      <td><button onclick="removeWatchlistRow(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;">✕</button></td>
+    </tr>`).join('');
+}
+
+function updateWatchlist(i, key, val) {
+  state.watchlist[i][key] = val;
+  saveState();
+}
+
+function addWatchlistRow() {
+  state.watchlist.push({asset:'',direction:'LONG',entryZone:'',target:'',stop:'',rr:'',status:'Watching'});
+  saveState();
+  renderWatchlist();
+}
+
+function removeWatchlistRow(i) {
+  state.watchlist.splice(i, 1);
+  saveState();
+  renderWatchlist();
+}
+
+function renderCryptoBudget() {
+  const openCrypto = state.positions.filter(p => p.status === 'open' && p.engine === 'CRYPTO');
+  const deployed = openCrypto.reduce((s,p) => s + (p.sizeNIS||0), 0);
+  const avail = Math.max(0, state.settings.allocationCrypto - deployed);
+  document.getElementById('cryptoDeployed').textContent = '₪'+deployed.toLocaleString();
+  document.getElementById('cryptoAvailable').textContent = '₪'+avail.toLocaleString();
+}
+
+// ============================================================
+// POSITIONS TAB
+// ============================================================
+let _positionsSub = 'open';
+
+function setPositionsSub(sub) {
+  _positionsSub = sub;
+  document.getElementById('openPositions').style.display = sub === 'open' ? 'block' : 'none';
+  document.getElementById('closedPositions').style.display = sub === 'closed' ? 'block' : 'none';
+  document.getElementById('subOpen').classList.toggle('active', sub==='open');
+  document.getElementById('subClosed').classList.toggle('active', sub==='closed');
+  renderPositions();
+}
+
+function renderPositions() {
+  renderOpenPositions();
+  renderClosedPositions();
+  renderPosStats();
+  renderCryptoBudget();
+}
+
+function renderOpenPositions() {
+  const open = state.positions.filter(p => p.status === 'open');
+  const tbody = document.getElementById('openPositionsBody');
+  if (!open.length) {
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">No open positions. Find opportunities in Polymarket or Crypto tabs.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = open.map(p => {
+    const engineClass = p.engine === 'POLYMARKET' ? 'badge-poly' : p.engine === 'CRYPTO' ? 'badge-crypto' : 'badge-options';
+    const openedDate = new Date(p.openedAt).toLocaleDateString();
+    // Current price: for crypto, try live data
+    let currentPrice = '—';
+    if (p.engine === 'CRYPTO' && cryptoData) {
+      const asset = p.market?.toLowerCase();
+      if (asset?.includes('btc') || asset?.includes('bitcoin')) currentPrice = '$'+(cryptoData.bitcoin?.usd||0).toLocaleString();
+      else if (asset?.includes('eth') || asset?.includes('ether')) currentPrice = '$'+(cryptoData.ethereum?.usd||0).toLocaleString();
+    }
+    const pnlClass = (p.pnlNIS||0) >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const pnlPct = p.sizeNIS ? (((p.pnlNIS||0)/p.sizeNIS)*100).toFixed(1) : '0.0';
+    return `<tr>
+      <td><span class="badge ${engineClass}">${p.engine}</span></td>
+      <td title="${p.market}">${(p.market||'').substring(0,30)}${(p.market||'').length>30?'…':''}</td>
+      <td><span class="badge ${p.direction==='YES'||p.direction==='LONG'?'badge-green':'badge-red'}">${p.direction}</span></td>
+      <td>${p.entryPrice||'—'}</td>
+      <td>${currentPrice}</td>
+      <td class="${pnlClass}">₪${(p.pnlNIS||0).toFixed(0)}</td>
+      <td class="${pnlClass}">${(p.pnlNIS||0)>=0?'+':''}${pnlPct}%</td>
+      <td>₪${(p.sizeNIS||0).toLocaleString()}</td>
+      <td>${openedDate}</td>
+      <td><button class="btn-skip" onclick="openCloseModal('${p.id}')" style="font-size:11px;padding:4px 10px;">Close</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClosedPositions() {
+  const closed = state.positions.filter(p => p.status === 'closed').sort((a,b) => new Date(b.closedAt)-new Date(a.closedAt));
+  const tbody = document.getElementById('closedPositionsBody');
+  if (!closed.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No closed positions yet.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = closed.map(p => {
+    const engineClass = p.engine==='POLYMARKET'?'badge-poly':p.engine==='CRYPTO'?'badge-crypto':'badge-options';
+    const resultClass = p.outcome==='win'?'badge-green':p.outcome==='loss'?'badge-red':'badge-muted';
+    const pnlClass = (p.pnlNIS||0) >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const pnlPct = p.sizeNIS ? (((p.pnlNIS||0)/p.sizeNIS)*100).toFixed(1) : '0.0';
+    const dur = p.openedAt && p.closedAt ?
+      Math.round((new Date(p.closedAt)-new Date(p.openedAt))/86400000)+'d' : '—';
+    return `<tr>
+      <td><span class="badge ${engineClass}">${p.engine}</span></td>
+      <td title="${p.market}">${(p.market||'').substring(0,28)}${(p.market||'').length>28?'…':''}</td>
+      <td><span class="badge ${resultClass}">${(p.outcome||'push').toUpperCase()}</span></td>
+      <td>${p.entryPrice||'—'}</td>
+      <td>${p.exitPrice||'—'}</td>
+      <td class="${pnlClass}">₪${(p.pnlNIS||0).toFixed(0)}</td>
+      <td class="${pnlClass}">${(p.pnlNIS||0)>=0?'+':''}${pnlPct}%</td>
+      <td>${dur}</td>
+      <td>${p.closedAt?new Date(p.closedAt).toLocaleDateString():'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPosStats() {
+  const open = state.positions.filter(p => p.status === 'open');
+  const closed = state.positions.filter(p => p.status === 'closed');
+  const deployed = open.reduce((s,p) => s+(p.sizeNIS||0), 0);
+  const allSizes = [...open,...closed].map(p=>p.sizeNIS||0).filter(x=>x>0);
+  const avgSize = allSizes.length ? Math.round(allSizes.reduce((a,b)=>a+b,0)/allSizes.length) : 0;
+  const pnls = closed.map(p=>p.pnlNIS||0);
+  const best = pnls.length ? Math.max(...pnls) : null;
+  const worst = pnls.length ? Math.min(...pnls) : null;
+  const closedPnl = pnls.reduce((a,b)=>a+b,0);
+
+  document.getElementById('statDeployed').textContent = '₪'+deployed.toLocaleString();
+  document.getElementById('statAvgSize').textContent = allSizes.length ? '₪'+avgSize.toLocaleString() : '—';
+  document.getElementById('statBest').textContent = best !== null ? '₪'+best.toFixed(0) : '—';
+  document.getElementById('statWorst').textContent = worst !== null ? '₪'+worst.toFixed(0) : '—';
+  const closedPnlEl = document.getElementById('statClosedPnl');
+  closedPnlEl.textContent = '₪'+closedPnl.toFixed(0);
+  closedPnlEl.className = 'stat-val '+(closedPnl>=0?'pnl-pos':'pnl-neg');
+}
+
+// ============================================================
+// HEADER STATS
+// ============================================================
+function updateHeaderStats() {
+  const open = state.positions.filter(p => p.status === 'open');
+  const closed = state.positions.filter(p => p.status === 'closed');
+  const deployed = open.reduce((s,p) => s+(p.sizeNIS||0), 0);
+  const closedPnl = closed.reduce((s,p) => s+(p.pnlNIS||0), 0);
+  const wins = closed.filter(p => p.outcome === 'win').length;
+  const winRate = closed.length ? ((wins/closed.length)*100).toFixed(0)+'%' : '—';
+
+  document.getElementById('capDeployed').textContent = '₪'+deployed.toLocaleString();
+  const pnlEl = document.getElementById('capPnl');
+  pnlEl.textContent = (closedPnl>=0?'+':'')+'₪'+closedPnl.toFixed(0) +
+    (closed.length ? ` (${((closedPnl/state.settings.capitalNIS)*100).toFixed(1)}%)` : '');
+  pnlEl.className = closedPnl >= 0 ? 'pos' : 'neg';
+  document.getElementById('capWinRate').textContent = winRate;
+}
+
+// ============================================================
+// LOG TAB
+// ============================================================
+function renderLog() {
+  renderLogTable();
+  renderAnalytics();
+  renderPnlChart();
+  renderSkippedTable();
+}
+
+function renderLogTable() {
+  const tbody = document.getElementById('logBody');
+  if (!state.log.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No log entries yet.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = state.log.slice(0, 200).map(e => {
+    const typeClass = {open:'lt-open',close:'lt-close',skip:'lt-skip',system:'lt-system'}[e.type]||'lt-system';
+    const engineClass = e.engine==='POLYMARKET'?'badge-poly':e.engine==='CRYPTO'?'badge-crypto':e.engine?'badge-options':'badge-muted';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:11px;">${new Date(e.timestamp).toLocaleString()}</td>
+      <td><span class="log-type-badge ${typeClass}">${e.type}</span></td>
+      <td>${e.engine?`<span class="badge ${engineClass}" style="font-size:10px">${e.engine}</span>`:'—'}</td>
+      <td title="${e.market||''}">${(e.market||'—').substring(0,25)}</td>
+      <td>${e.skipReason||e.note?.substring(0,20)||'—'}</td>
+      <td>${e.sizeNIS ? '₪'+e.sizeNIS : '—'}</td>
+      <td class="${(e.pnlNIS||0)>=0?'pnl-pos':'pnl-neg'}">${e.pnlNIS!==undefined&&e.pnlNIS!==0?((e.pnlNIS>=0?'+':'')+'₪'+e.pnlNIS.toFixed(0)):'—'}</td>
+      <td style="font-size:11px;color:var(--muted);">${(e.note||'').substring(0,40)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAnalytics() {
+  const closed = state.positions.filter(p => p.status === 'closed');
+  const wins = closed.filter(p => p.outcome === 'win');
+  const losses = closed.filter(p => p.outcome === 'loss');
+  const winRate = closed.length ? ((wins.length/closed.length)*100).toFixed(0)+'%' : '—';
+  const avgWin = wins.length ? wins.reduce((s,p)=>s+(p.pnlNIS||0),0)/wins.length : 0;
+  const avgLoss = losses.length ? losses.reduce((s,p)=>s+(p.pnlNIS||0),0)/losses.length : 0;
+  const ev = closed.length ? (wins.length/closed.length)*avgWin + (losses.length/closed.length)*avgLoss : 0;
+
+  document.getElementById('analyticsWR').textContent = winRate;
+  document.getElementById('analyticsWRSub').textContent = closed.length ? `${wins.length} wins / ${closed.length} total` : 'No closed trades yet';
+  document.getElementById('analyticsAvgWin').textContent = wins.length ? '₪'+avgWin.toFixed(0) : '₪0';
+  document.getElementById('analyticsAvgLoss').textContent = losses.length ? '₪'+avgLoss.toFixed(0) : '₪0';
+  const evEl = document.getElementById('analyticsEV');
+  evEl.textContent = closed.length ? (ev>=0?'+':'')+'₪'+ev.toFixed(0) : '₪0';
+  evEl.style.color = ev >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Edge Decay Monitor (Renaissance #2)
+  const recent5 = closed.slice(-5);
+  const recentWins = recent5.filter(p => p.outcome === 'win').length;
+  const recentWR = recent5.length ? (recentWins / recent5.length * 100) : null;
+  const overallWR = closed.length ? (wins.length / closed.length * 100) : null;
+  const edgeEl = document.getElementById('edgeDecayCard');
+  if (edgeEl) {
+    if (!closed.length || closed.length < 3) {
+      edgeEl.innerHTML = '<div style="font-size:12px;color:var(--muted);">Need 3+ closed trades to track edge health.</div>';
+    } else {
+      const diff = recentWR - overallWR;
+      const trend = diff >= 5 ? '📈 Improving' : diff <= -10 ? '⚠️ Edge Decay' : '→ Stable';
+      const tColor = diff >= 5 ? 'var(--green)' : diff <= -10 ? 'var(--red)' : 'var(--gold)';
+      const warning = diff <= -10 ? '<div style="font-size:12px;color:var(--red);margin-top:6px;padding:8px;background:rgba(245,101,101,.1);border-radius:6px;">⚠️ Recent win rate is declining. Review your last 5 trades — the edge may be fading. Reduce position sizes until it recovers.</div>' : '';
+      edgeEl.innerHTML = `
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+          <div><div style="font-size:11px;color:var(--muted);">ALL-TIME WIN RATE</div><div style="font-size:18px;font-weight:700;">${overallWR.toFixed(0)}%</div></div>
+          <div><div style="font-size:11px;color:var(--muted);">LAST 5 TRADES</div><div style="font-size:18px;font-weight:700;">${recentWR.toFixed(0)}%</div></div>
+          <div><div style="font-size:11px;color:var(--muted);">TREND</div><div style="font-size:18px;font-weight:700;color:${tColor}">${trend}</div></div>
+          <div style="font-size:12px;color:var(--muted);">Change: <strong style="color:${tColor}">${diff>=0?'+':''}${diff.toFixed(0)}pp</strong></div>
+        </div>${warning}`;
+    }
+  }
+}
+
+function renderPnlChart() {
+  const today = new Date().toISOString().slice(0,10);
+  // Build pnl history from closed positions
+  const sorted = [...state.positions.filter(p=>p.status==='closed')].sort((a,b)=>new Date(a.closedAt)-new Date(b.closedAt));
+  const history = [{date: state.pnlHistory[0]?.date || today, valueNIS: 10000}];
+  let running = 10000;
+  sorted.forEach(p => {
+    running += (p.pnlNIS||0);
+    const d = p.closedAt ? p.closedAt.slice(0,10) : today;
+    history.push({date:d, valueNIS: running});
+  });
+
+  const labels = history.map(h => h.date);
+  const data = history.map(h => h.valueNIS);
+
+  const ctx = document.getElementById('pnlChart').getContext('2d');
+  if (pnlChartInstance) pnlChartInstance.destroy();
+  pnlChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Account Value (₪)',
+        data,
+        borderColor: '#5c7cfa',
+        backgroundColor: 'rgba(92,124,250,0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: data.length <= 20 ? 4 : 2,
+        pointBackgroundColor: '#5c7cfa'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#e8eaf6', font: {size:12} } },
+        tooltip: {
+          backgroundColor: '#1a1d27',
+          borderColor: '#2e3350',
+          borderWidth: 1,
+          titleColor: '#e8eaf6',
+          bodyColor: '#7b82a8',
+          callbacks: { label: ctx => '₪'+ctx.parsed.y.toLocaleString() }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#7b82a8', font:{size:10} }, grid: { color: '#2e3350' } },
+        y: {
+          ticks: { color: '#7b82a8', font:{size:10}, callback: v => '₪'+v.toLocaleString() },
+          grid: { color: '#2e3350' }
+        }
+      }
+    }
+  });
+}
+
+function renderSkippedTable() {
+  const skipped = state.log.filter(e => e.type === 'skip');
+  const tbody = document.getElementById('skippedBody');
+  if (!skipped.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">No skipped trades yet.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = skipped.map(e => `<tr>
+    <td title="${e.market}">${(e.market||'—').substring(0,35)}</td>
+    <td>${e.edgeScore||'—'}</td>
+    <td>${e.skipReason||'—'}</td>
+    <td style="font-size:11px;">${new Date(e.timestamp).toLocaleDateString()}</td>
+  </tr>`).join('');
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+function openAddPositionModal(prefill) {
+  // Reset
+  document.querySelectorAll('#addPositionModal .seg-btn[data-engine]').forEach(b => b.classList.toggle('active', b.dataset.engine === 'POLYMARKET'));
+  document.querySelectorAll('#addPositionModal .seg-btn[data-dir]').forEach(b => b.classList.toggle('active', b.dataset.dir === 'YES'));
+  _posEngine = 'POLYMARKET'; _posDir = 'YES';
+  document.getElementById('posMarket').value = '';
+  document.getElementById('posEntry').value = '';
+  document.getElementById('posEstProb').value = 50;
+  document.getElementById('posEstProbVal').textContent = 50;
+  document.getElementById('posSizeNIS').value = '';
+  document.getElementById('posTarget').value = '';
+  document.getElementById('posStop').value = '';
+  document.getElementById('posNotes').value = '';
+
+  if (prefill) {
+    if (prefill.engine) {
+      _posEngine = prefill.engine;
+      document.querySelectorAll('#addPositionModal .seg-btn[data-engine]').forEach(b => b.classList.toggle('active', b.dataset.engine === prefill.engine));
+    }
+    if (prefill.market) document.getElementById('posMarket').value = prefill.market;
+    if (prefill.recSizeNIS) document.getElementById('posSizeNIS').value = prefill.recSizeNIS;
+  }
+  openModal('addPositionModal');
+}
+
+function setEngine(btn, val) {
+  _posEngine = val;
+  document.querySelectorAll('#addPositionModal .seg-btn[data-engine]').forEach(b => b.classList.toggle('active', b.dataset.engine === val));
+}
+
+function setDirection(btn, val) {
+  _posDir = val;
+  document.querySelectorAll('#addPositionModal .seg-btn[data-dir]').forEach(b => b.classList.toggle('active', b.dataset.dir === val));
+}
+
+function updateEstProb() {
+  document.getElementById('posEstProbVal').textContent = document.getElementById('posEstProb').value;
+}
+
+function confirmAddPosition() {
+  const market = document.getElementById('posMarket').value.trim();
+  if (!market) { alert('Enter a market/asset name.'); return; }
+  const entry = parseFloat(document.getElementById('posEntry').value) || 0;
+  const estProb = parseFloat(document.getElementById('posEstProb').value);
+  const sizeNIS = parseFloat(document.getElementById('posSizeNIS').value) || 0;
+  const target = parseFloat(document.getElementById('posTarget').value) || null;
+  const stop = parseFloat(document.getElementById('posStop').value) || null;
+  const notes = document.getElementById('posNotes').value;
+
+  const pos = {
+    id: uid(), engine: _posEngine, market, direction: _posDir,
+    entryPrice: entry, estProbability: estProb, sizeNIS, targetPrice: target,
+    stopLoss: stop, notes, openedAt: new Date().toISOString(),
+    status: 'open', pnlNIS: 0
+  };
+  state.positions.push(pos);
+  state.log.unshift({
+    id: uid(), timestamp: new Date().toISOString(), type: 'open',
+    engine: _posEngine, market, sizeNIS, pnlNIS: 0, note: notes
+  });
+  saveState();
+  closeModal('addPositionModal');
+  renderPositions();
+  updateHeaderStats();
+  alert('Position opened!');
+}
+
+function openCloseModal(posId) {
+  const pos = state.positions.find(p => p.id === posId);
+  if (!pos) return;
+  document.getElementById('closePosId').value = posId;
+  document.getElementById('closePosMarket').value = pos.market;
+  document.getElementById('closePosEntry').value = pos.entryPrice || '';
+  document.getElementById('closePosExit').value = '';
+  document.getElementById('closePosNotes').value = '';
+  _closeOutcome = 'win';
+  document.querySelectorAll('#closePositionModal .seg-btn[data-outcome]').forEach(b => b.classList.toggle('active', b.dataset.outcome === 'win'));
+  openModal('closePositionModal');
+}
+
+function setOutcome(btn, val) {
+  _closeOutcome = val;
+  document.querySelectorAll('#closePositionModal .seg-btn[data-outcome]').forEach(b => b.classList.toggle('active', b.dataset.outcome === val));
+}
+
+function confirmClosePosition() {
+  const posId = document.getElementById('closePosId').value;
+  const exitPrice = parseFloat(document.getElementById('closePosExit').value);
+  const notes = document.getElementById('closePosNotes').value;
+  if (!exitPrice && exitPrice !== 0) { alert('Enter exit price.'); return; }
+
+  const pos = state.positions.find(p => p.id === posId);
+  if (!pos) return;
+
+  // Calculate P&L
+  let pnlNIS = 0;
+  if (pos.engine === 'POLYMARKET') {
+    // P&L based on probability change
+    pnlNIS = ((exitPrice - (pos.entryPrice||0)) / (pos.entryPrice||1)) * pos.sizeNIS;
+    if (pos.direction === 'NO') pnlNIS = -pnlNIS;
+    if (_closeOutcome === 'win' && exitPrice >= 0.99) pnlNIS = pos.sizeNIS * ((1 - (pos.entryPrice||0.5)) / (pos.entryPrice||0.5));
+    if (_closeOutcome === 'loss' && exitPrice <= 0.01) pnlNIS = -pos.sizeNIS;
+    if (_closeOutcome === 'push') pnlNIS = 0;
+  } else {
+    // Price-based P&L
+    const pct = (exitPrice - (pos.entryPrice||exitPrice)) / (pos.entryPrice||exitPrice);
+    pnlNIS = pos.direction === 'LONG' || pos.direction === 'YES' ? pct * pos.sizeNIS : -pct * pos.sizeNIS;
+  }
+
+  // Override with outcome for manual control
+  if (_closeOutcome === 'push') pnlNIS = 0;
+
+  pos.status = 'closed';
+  pos.closedAt = new Date().toISOString();
+  pos.exitPrice = exitPrice;
+  pos.pnlNIS = parseFloat(pnlNIS.toFixed(2));
+  pos.outcome = _closeOutcome;
+  pos.closeNotes = notes;
+
+  state.log.unshift({
+    id: uid(), timestamp: new Date().toISOString(), type: 'close',
+    engine: pos.engine, market: pos.market,
+    sizeNIS: pos.sizeNIS, pnlNIS: pos.pnlNIS, note: notes
+  });
+
+  saveState();
+  closeModal('closePositionModal');
+  renderPositions();
+  updateHeaderStats();
+  alert(`Position closed. P&L: ${pnlNIS >= 0 ? '+' : ''}₪${pnlNIS.toFixed(0)}`);
+}
+
+// ============================================================
+// REFRESH
+// ============================================================
+async function refreshAll() {
+  const icon = document.getElementById('refreshIcon');
+  icon.className = 'spin';
+  document.getElementById('lastUpdated').textContent = 'Refreshing…';
+
+  await Promise.all([fetchUsdNis(), fetchCrypto(), fetchFng(), fetchPolymarkets()]);
+
+  renderBrief();
+  renderCryptoTab();
+  renderPolyMarkets();
+  updateHeaderStats();
+
+  icon.className = '';
+  document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+  // Log system event
+  state.log.unshift({id:uid(),timestamp:new Date().toISOString(),type:'system',market:'',note:'Data refreshed'});
+  saveState();
+}
+
+// ============================================================
+// UTILITY
+// ============================================================
+function uid() { return Math.random().toString(36).slice(2,11) + Date.now().toString(36); }
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  loadState();
+  updateSetupProgress();
+
+  // Render immediately with cached/default data
+  renderBrief();
+  renderCryptoTab();
+  renderPolyMarkets();
+  renderPositions();
+  updateHeaderStats();
+
+  // Fetch live data
+  await Promise.all([fetchUsdNis(), fetchCrypto(), fetchFng(), fetchPolymarkets()]);
+
+  // Re-render with live data
+  renderBrief();
+  renderCryptoTab();
+  renderPolyMarkets();
+  updateHeaderStats();
+
+  document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+  // Auto-refresh every 5 minutes
+  if (_refreshTimer) clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(refreshAll, 5 * 60 * 1000);
+
+  // Log startup
+  state.log.unshift({id:uid(),timestamp:new Date().toISOString(),type:'system',market:'',note:'TradingEngine started'});
+  saveState();
+}
+
+// Auto-start if already authenticated
+if (localStorage.getItem('te_pw') === '1') {
+  init();
+}
+</script>
+</body>
+</html>
