@@ -1577,23 +1577,30 @@ async function autoRefreshIfStale() {
   try {
     const res  = await fetch('/api/status', { signal: AbortSignal.timeout(2000) });
     const data = await res.json();
-    if (!data.configured || !data.lastUpdate) return;
-    const ageHours = (Date.now() - new Date(data.lastUpdate)) / 3600000;
-    if (ageHours < 4) return;
-    console.log(`[auto] Data is ${ageHours.toFixed(1)}h old — refreshing from bank...`);
-    const btn = document.getElementById('btnRefresh');
-    if (btn) { btn.textContent = '⏳ מרענן...'; btn.disabled = true; }
+    if (!data.configured) return;
+    // Always refresh in background on page load — show cached data immediately, update silently
+    const ageMin = data.lastUpdate ? (Date.now() - new Date(data.lastUpdate)) / 60000 : 999;
+    if (ageMin < 30) return; // skip if refreshed within last 30 min
+    console.log(`[auto] Triggering background refresh (data ${ageMin.toFixed(0)}m old)...`);
+    const pill = document.getElementById('statusTxt');
+    if (pill) pill.textContent = 'מסנכרן...';
     const r2    = await fetch('/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data2 = await r2.json();
-    if (data2.ok && data2.transactions?.length) {
-      allTx = data2.transactions;
-      localStorage.setItem('finance_tx', JSON.stringify(allTx));
-      buildState();
-      buildTxFilters();
-      renderAll();
-      console.log('[auto] Refresh complete —', allTx.length, 'transactions');
+    if (data2.ok) {
+      if (data2.transactions?.length) {
+        allTx = data2.transactions;
+        localStorage.setItem('finance_tx', JSON.stringify(allTx));
+        buildState();
+        buildTxFilters();
+        renderAll();
+        console.log('[auto] Refresh complete —', allTx.length, 'transactions');
+      }
+      // Also refresh accounts if that data came back
+      if (data2.accounts) {
+        localStorage.setItem('finance_accounts', JSON.stringify({ accounts: data2.accounts, updatedAt: new Date() }));
+      }
+      if (pill) pill.textContent = `מחובר (${data.scrapers?.join(', ') || ''})`;
     }
-    if (btn) { btn.textContent = '🔄 רענן'; btn.disabled = false; }
   } catch { /* server not available */ }
 }
 </script>
