@@ -3959,7 +3959,7 @@ function renderGapTable() {
     if      (gapSortCol === 'category') { av = a.label;            bv = b.label; }
     else if (gapSortCol === 'target'  ) { av = a.target;           bv = b.target; }
     else if (gapSortCol === 'now'     ) { av = a.curPct;           bv = b.curPct; }
-    else                               { av = Math.abs(a.gapPct);  bv = Math.abs(b.gapPct); } // gap: magnitude
+    else                               { av = a.gapPct;             bv = b.gapPct; } // gap: signed value
     if (typeof av === 'string') return gapSortDir * av.localeCompare(bv);
     return gapSortDir * (av - bv);
   });
