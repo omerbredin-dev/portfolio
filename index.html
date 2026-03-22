@@ -1042,7 +1042,7 @@
   <!-- Summary cards -->
   <div class="cards">
     <div class="card purple">
-      <div class="card-label">Today's Change</div>
+      <div class="card-label" id="c-today-label">Today's Change</div>
       <div class="card-value" id="c-today">—</div>
       <div class="card-sub" id="c-today-sub">—</div>
     </div>
@@ -2033,7 +2033,10 @@ function renderCards() {
   const todayEl = document.getElementById('c-today');
   todayEl.textContent = (todayUp ? '+' : '') + fmt(todayChangeUSD);
   todayEl.className = 'card-value ' + (todayUp ? 'up' : 'down');
-  document.getElementById('c-today-sub').textContent = (todayUp ? '+' : '') + todayChangePct.toFixed(2) + '% from yesterday';
+  const dayLabel = window._dailyChangeLabel ? `${window._dailyChangeLabel}` : 'from yesterday';
+  document.getElementById('c-today-sub').textContent = (todayUp ? '+' : '') + todayChangePct.toFixed(2) + '% ' + dayLabel;
+  const cardLabel = document.getElementById('c-today-label');
+  if (cardLabel) cardLabel.textContent = window._dailyChangeLabel ? `Last Change (${window._dailyChangeLabel})` : "Today's Change";
 }
 
 // ─────────────────────────────────────────────
@@ -4862,10 +4865,24 @@ const TV_TICKER = {
 const TV_TICKER_REV = Object.fromEntries(Object.entries(TV_TICKER).map(([k,v]) => [v, k]));
 
 // ── Cache last known good prices in localStorage so we never show hardcoded stale values ──
+// Also cache last meaningful (non-zero) daily changes so weekends/after-hours show last trading day
 function cachePrices() {
   const cache = {};
   PORTFOLIO.forEach(r => { cache[r.symbol] = { price: r.currentPrice, dailyPct: r.dailyChangePct }; });
   try { localStorage.setItem('_priceCache', JSON.stringify(cache)); } catch(_) {}
+
+  // Save daily changes separately — only overwrite when we have meaningful data
+  const hasNonZero = PORTFOLIO.some(r => Math.abs(r.dailyChangePct || 0) > 0.001);
+  if (hasNonZero) {
+    const dailyCache = {};
+    PORTFOLIO.forEach(r => { dailyCache[r.symbol] = r.dailyChangePct || 0; });
+    try {
+      localStorage.setItem('_dailyChangeCache', JSON.stringify({
+        data: dailyCache,
+        date: new Date().toISOString()
+      }));
+    } catch(_) {}
+  }
 }
 function loadCachedPrices() {
   try {
@@ -4878,8 +4895,29 @@ function loadCachedPrices() {
     });
   } catch(_) {}
 }
+// Restore last meaningful daily changes when current fetch returns all zeros (market closed)
+function restoreDailyChanges() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('_dailyChangeCache') || 'null');
+    if (!cached?.data) return false;
+    const allZero = PORTFOLIO.every(r => Math.abs(r.dailyChangePct || 0) < 0.001);
+    if (allZero) {
+      PORTFOLIO.forEach(r => {
+        if (cached.data[r.symbol] != null) r.dailyChangePct = cached.data[r.symbol];
+      });
+      // Show when these were from
+      const d = new Date(cached.date);
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      window._dailyChangeLabel = dayNames[d.getDay()] + ' ' + d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+      return true;
+    }
+    window._dailyChangeLabel = null;
+    return false;
+  } catch(_) { return false; }
+}
 // Load cached prices immediately on boot (before first refresh)
 loadCachedPrices();
+restoreDailyChanges();
 
 // ── Helper: fetch one symbol from Yahoo v8 chart ──
 async function yahooChartPrice(symbol) {
@@ -5040,11 +5078,16 @@ async function refreshPrices() {
 
   // Cache all prices so next load starts with latest known values
   cachePrices();
+  // If all daily changes are 0 (market closed), restore last trading day's changes
+  const restored = restoreDailyChanges();
   savePortfolioState();
   renderAll();
   const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   const staleCount = _staleSymbols.size;
-  btn.textContent = staleCount ? `↻ ${now} (${staleCount} stale)` : `↻ ${now}`;
+  let label = `↻ ${now}`;
+  if (staleCount) label += ` (${staleCount} stale)`;
+  if (restored && window._dailyChangeLabel) label += ` · ${window._dailyChangeLabel}`;
+  btn.textContent = label;
   btn.disabled = false;
 }
 
@@ -5146,6 +5189,7 @@ async function loadPricesJson() {
     }
 
     cachePrices();
+    restoreDailyChanges();
     console.log('[prices.json] Applied ' + applied + ' prices');
     return applied > 0;
   } catch(e) {
