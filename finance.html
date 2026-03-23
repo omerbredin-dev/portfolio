@@ -548,7 +548,15 @@ let _moveSelectedKeys = new Set();
 // BANK SERVER
 // ════════════════════════════════════════════
 const IS_LOCAL    = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const BANK_SERVER = IS_LOCAL ? '' : 'http://localhost:3001';
+const BANK_SERVER = IS_LOCAL ? '' : 'https://sandra-supercordial-yvonne.ngrok-free.dev';
+
+// Wrap fetch to add ngrok bypass header for all bank server calls
+function bankFetch(url, opts = {}) {
+  if (!IS_LOCAL) {
+    opts.headers = Object.assign({ 'ngrok-skip-browser-warning': '1' }, opts.headers || {});
+  }
+  return fetch(url, opts);
+}
 
 // ════════════════════════════════════════════
 // PASSWORD
@@ -1396,7 +1404,7 @@ function renderTxView() {
 // ════════════════════════════════════════════
 async function checkBankServer() {
   try {
-    const res  = await fetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
+    const res  = await bankFetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
     if (!res.ok) return;
     const data = await res.json();
     document.getElementById('statusDot').classList.add('on');
@@ -1418,7 +1426,7 @@ async function checkBankServer() {
 
 async function loadFromServer(showSpinner = true) {
   try {
-    const res  = await fetch(BANK_SERVER + '/api/transactions', { signal: AbortSignal.timeout(5000) });
+    const res  = await bankFetch(BANK_SERVER + '/api/transactions', { signal: AbortSignal.timeout(5000) });
     const data = await res.json();
     if (data.transactions?.length) {
       allTx = data.transactions;
@@ -1435,7 +1443,7 @@ async function refreshFromBank() {
   btn.textContent = '⏳ מרענן...';
   btn.disabled = true;
   try {
-    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const res  = await bankFetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await res.json();
     if (data.ok && data.transactions?.length) {
       allTx = data.transactions;
@@ -1458,7 +1466,7 @@ async function refreshFromBank() {
 // ════════════════════════════════════════════
 async function loadAccounts() {
   try {
-    const res  = await fetch(BANK_SERVER + '/api/accounts', { signal: AbortSignal.timeout(5000) });
+    const res  = await bankFetch(BANK_SERVER + '/api/accounts', { signal: AbortSignal.timeout(5000) });
     const data = await res.json();
     renderAccounts(data);
   } catch { /* server not running */ }
@@ -1524,7 +1532,7 @@ async function refreshAccounts() {
   btn.textContent = '⏳ מושך נתונים... (1-2 דקות)';
   btn.disabled = true;
   try {
-    const res  = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const res  = await bankFetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await res.json();
     if (data.ok) {
       if (data.transactions?.length) {
@@ -1547,7 +1555,7 @@ async function refreshAccounts() {
 
 async function syncCSVToServer(tx) {
   try {
-    await fetch(BANK_SERVER + '/api/import', {
+    await bankFetch(BANK_SERVER + '/api/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ transactions: tx }),
@@ -1585,7 +1593,7 @@ function init() {
 
 async function autoRefreshIfStale() {
   try {
-    const res  = await fetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
+    const res  = await bankFetch(BANK_SERVER + '/api/status', { signal: AbortSignal.timeout(2000) });
     const data = await res.json();
     if (!data.configured) return;
     // Always refresh in background — show cached data immediately, update silently
@@ -1594,7 +1602,7 @@ async function autoRefreshIfStale() {
     console.log(`[auto] Triggering background refresh (data ${ageMin.toFixed(0)}m old)...`);
     const pill = document.getElementById('statusTxt');
     if (pill) pill.textContent = 'מסנכרן...';
-    const r2    = await fetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const r2    = await bankFetch(BANK_SERVER + '/api/refresh', { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data2 = await r2.json();
     if (data2.ok) {
       if (data2.transactions?.length) {
